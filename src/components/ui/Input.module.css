@@ -1,0 +1,113 @@
+/* ============================================================================
+   Input & Textarea Component - Premium Styling
+   ============================================================================ */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.label.errorLabel {
+  color: var(--danger-text);
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  transition: color var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.inputIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  padding: var(--space-3) var(--space-4);
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input:hover:not(:disabled),
+.textarea:hover:not(:disabled) {
+  border-color: var(--text-tertiary);
+  background: var(--bg-quaternary);
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px var(--accent-bg), var(--shadow-glow);
+}
+
+/* With icon padding */
+.hasIcon {
+  padding-left: calc(var(--space-3) + 16px + var(--space-3));
+}
+
+/* Focused state: icon gets accent color */
+.input:focus ~ .inputIconRight,
+.inputContainer:focus-within .inputIcon {
+  color: var(--accent-primary);
+}
+
+/* Error state */
+.inputError {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px var(--danger-bg) !important;
+}
+
+.errorMessage {
+  font-size: var(--text-xs);
+  color: var(--danger-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Disabled */
+.input:disabled,
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+}
+
+/* Textarea specific */
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.6;
+}

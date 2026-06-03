@@ -1,0 +1,53 @@
+/* ============================================================================
+   ThemeToggle Component
+   ============================================================================ */
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.button:hover {
+  background: var(--bg-quaternary);
+  color: var(--accent-text);
+  border-color: var(--border-focus);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.iconWrapper svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sun {
+  transform: rotate(0deg);
+}
+
+.moon {
+  transform: rotate(0deg);
+}
+
+.button:hover .sun {
+  transform: rotate(45deg);
+}
+
+.button:hover .moon {
+  transform: rotate(-15deg);
+}

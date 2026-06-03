@@ -1,0 +1,26 @@
+/* ============================================================================
+   Card Component - General purpose container
+   ============================================================================ */
+
+.card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  transition: all var(--transition-fast);
+}
+
+.hoverable:hover {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* Padding variants */
+.noPadding {
+  padding: 0;
+}
+
+.compact {
+  padding: var(--space-4);
+}

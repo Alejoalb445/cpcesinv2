@@ -1,0 +1,86 @@
+/* ============================================================================
+   Tabs Component
+   ============================================================================ */
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--border-primary);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.container::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  border: none;
+  background: none;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: transparent;
+  border-radius: var(--radius-full) var(--radius-full) 0 0;
+  transition: background var(--transition-fast);
+}
+
+.active {
+  color: var(--accent-text);
+}
+
+.active::after {
+  background: var(--accent-primary);
+}
+
+.tabIcon {
+  display: flex;
+  align-items: center;
+}
+
+.tabIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.tabCount {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-quaternary);
+  color: var(--text-secondary);
+  min-width: 20px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.active .tabCount {
+  background: var(--accent-bg);
+  color: var(--accent-text);
+}

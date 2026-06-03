@@ -1,0 +1,52 @@
+/* ============================================================================
+   ConfirmDialog Component
+   ============================================================================ */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.iconRow {
+  display: flex;
+  justify-content: center;
+}
+
+.iconCircle {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconCircle svg {
+  width: 28px;
+  height: 28px;
+}
+
+.iconDanger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.iconWarning {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.message {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}

@@ -1,0 +1,43 @@
+/* ============================================================================
+   EmptyState Component
+   ============================================================================ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-6);
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.icon {
+  color: var(--text-tertiary);
+  opacity: 0.4;
+  margin-bottom: var(--space-2);
+}
+
+.icon svg {
+  width: 56px;
+  height: 56px;
+  stroke-width: 1.2;
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.description {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+.action {
+  margin-top: var(--space-2);
+}

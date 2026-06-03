@@ -1,0 +1,152 @@
+/* ============================================================================
+   DataTable Component - Premium Styling
+   ============================================================================ */
+
+.wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+/* Header */
+.thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.th:first-child {
+  border-top-left-radius: var(--radius-lg);
+}
+
+.th:last-child {
+  border-top-right-radius: var(--radius-lg);
+}
+
+.sortable {
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.sortable:hover {
+  color: var(--accent-text);
+}
+
+.sortIcon {
+  display: inline-flex;
+  margin-left: var(--space-1);
+  vertical-align: middle;
+  opacity: 0.5;
+}
+
+.sortIcon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sortActive .sortIcon {
+  opacity: 1;
+  color: var(--accent-primary);
+}
+
+/* Body */
+.tr {
+  border-bottom: 1px solid var(--border-secondary);
+  transition: background var(--transition-fast);
+}
+
+.tr:last-child {
+  border-bottom: none;
+}
+
+.tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tr:hover {
+  background: var(--bg-hover);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.td {
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+/* Loading skeleton */
+.skeletonRow {
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.skeletonCell {
+  padding: var(--space-3) var(--space-4);
+}
+
+.skeletonBar {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-quaternary) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  gap: var(--space-3);
+}
+
+.emptyIcon {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.emptyIcon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.emptyText {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

@@ -1,0 +1,104 @@
+/* ============================================================================
+   Select Component - Premium Styling
+   ============================================================================ */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.label.errorLabel {
+  color: var(--danger-text);
+}
+
+.selectContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  padding: var(--space-3) var(--space-10) var(--space-3) var(--space-4);
+  transition: all var(--transition-fast);
+  outline: none;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.select:hover:not(:disabled) {
+  border-color: var(--text-tertiary);
+  background: var(--bg-quaternary);
+}
+
+.select:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 3px var(--accent-bg), var(--shadow-glow);
+}
+
+.selectError {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px var(--danger-bg) !important;
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+}
+
+/* Placeholder color */
+.placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Custom arrow icon */
+.arrow {
+  position: absolute;
+  right: var(--space-3);
+  pointer-events: none;
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+  display: flex;
+  align-items: center;
+}
+
+.arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.selectContainer:focus-within .arrow {
+  color: var(--accent-primary);
+}
+
+.errorMessage {
+  font-size: var(--text-xs);
+  color: var(--danger-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
