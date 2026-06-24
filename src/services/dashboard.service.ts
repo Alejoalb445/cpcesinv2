@@ -1,178 +1,113 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { ItemStock, TicketSoporte, PedidoToner, PedidoStockGeneral } from '@/types/database';
+import { InsumoImpresora, TareaSoporte } from '@/types/database';
 
-// ============================================================================
-// DASHBOARD SERVICE
-// ============================================================================
-
-export interface DashboardStats {
-  totalActivos: number;
-  activosAsignados: number;
-  activosReparacion: number;
-  stockBajo: number;
-  pedidosTonerPendientes: number;
-  pedidosStockPendientes: number;
-  ticketsAbiertos: number;
-  licenciasVencer: number;
-  solicitudesCompraPendientes: number;
-}
-
-export async function getDashboardStats(): Promise<{ data: DashboardStats | null; error: Error | null }> {
-  const supabase = getSupabaseClient();
-
+export async function getDashboardStats() {
   try {
-    // Calculate date 30 days from now for license expiry check
-    const treintaDias = new Date();
-    treintaDias.setDate(treintaDias.getDate() + 30);
-    const fechaLimite = treintaDias.toISOString().split('T')[0];
-
+    const supabase = getSupabaseClient();
+    
+    // Using Promise.all and head:true for quick parallel count operations
     const [
-      totalActivos,
-      activosAsignados,
-      activosReparacion,
-      stockBajo,
-      pedidosTonerPendientes,
-      pedidosStockPendientes,
-      ticketsAbiertos,
-      licenciasVencer,
-      solicitudesCompraPendientes,
+      compCount,
+      perCount,
+      movCount,
+      infCount,
+      impCount,
+      activeTasksCount,
+      pcsInStock,
+      pcsInRepair,
+      insumosData
     ] = await Promise.all([
-      supabase
-        .from('activos')
-        .select('*', { count: 'exact', head: true })
-        .eq('dado_de_baja', false),
-      supabase
-        .from('activos')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'Asignado')
-        .eq('dado_de_baja', false),
-      supabase
-        .from('activos')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'En Reparación')
-        .eq('dado_de_baja', false),
-      supabase
-        .from('items_stock')
-        .select('*', { count: 'exact', head: true })
-        .eq('activo', true)
-        .filter('stock_actual', 'lte', 'stock_minimo'),
-      supabase
-        .from('pedidos_toner')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'Pendiente'),
-      supabase
-        .from('pedidos_stock_general')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'Pendiente'),
-      supabase
-        .from('tickets_soporte')
-        .select('*', { count: 'exact', head: true })
-        .not('estado', 'in', '("Resuelto","Cancelado")'),
-      supabase
-        .from('licencias')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'Activa')
-        .lte('fecha_vencimiento', fechaLimite)
-        .not('fecha_vencimiento', 'is', null),
-      supabase
-        .from('solicitudes_compra')
-        .select('*', { count: 'exact', head: true })
-        .eq('estado', 'Pendiente'),
+      supabase.from('computadoras').select('*', { count: 'exact', head: true }).neq('estado', 'Dado de baja'),
+      supabase.from('perifericos').select('*', { count: 'exact', head: true }).neq('estado', 'Dado de baja'),
+      supabase.from('dispositivos_moviles').select('*', { count: 'exact', head: true }).neq('estado', 'Dado de baja'),
+      supabase.from('dispositivos_infraestructura').select('*', { count: 'exact', head: true }).neq('estado', 'Dado de baja'),
+      supabase.from('impresoras').select('*', { count: 'exact', head: true }).neq('estado', 'Dado de baja'),
+      supabase.from('tareas_soporte').select('*', { count: 'exact', head: true }).in('estado', ['Abierta', 'En progreso', 'En espera']),
+      supabase.from('computadoras').select('*', { count: 'exact', head: true }).eq('estado', 'En stock'),
+      supabase.from('computadoras').select('*', { count: 'exact', head: true }).eq('estado', 'En reparación'),
+      supabase.from('insumos_impresora').select('stock_actual, stock_minimo')
     ]);
+
+    // Handle potential errors from counts
+    if (compCount.error) throw compCount.error;
+    if (perCount.error) throw perCount.error;
+    if (movCount.error) throw movCount.error;
+    if (infCount.error) throw infCount.error;
+    if (impCount.error) throw impCount.error;
+    if (activeTasksCount.error) throw activeTasksCount.error;
+    if (pcsInStock.error) throw pcsInStock.error;
+    if (pcsInRepair.error) throw pcsInRepair.error;
+    if (insumosData.error) throw insumosData.error;
+
+    const lowStockCount = (insumosData.data || []).filter(
+      (item: any) => item.stock_actual <= item.stock_minimo
+    ).length;
+
+    const totalAssets =
+      (compCount.count || 0) +
+      (perCount.count || 0) +
+      (movCount.count || 0) +
+      (infCount.count || 0) +
+      (impCount.count || 0);
 
     return {
       data: {
-        totalActivos: totalActivos.count || 0,
-        activosAsignados: activosAsignados.count || 0,
-        activosReparacion: activosReparacion.count || 0,
-        stockBajo: stockBajo.count || 0,
-        pedidosTonerPendientes: pedidosTonerPendientes.count || 0,
-        pedidosStockPendientes: pedidosStockPendientes.count || 0,
-        ticketsAbiertos: ticketsAbiertos.count || 0,
-        licenciasVencer: licenciasVencer.count || 0,
-        solicitudesCompraPendientes: solicitudesCompraPendientes.count || 0,
+        activosTotales: totalAssets,
+        computadoras: compCount.count || 0,
+        perifericos: perCount.count || 0,
+        moviles: movCount.count || 0,
+        infraestructura: infCount.count || 0,
+        impresoras: impCount.count || 0,
+        insumosBajoStock: lowStockCount,
+        tareasSoporteActivas: activeTasksCount.count || 0,
+        pcsEnStock: pcsInStock.count || 0,
+        pcsEnReparacion: pcsInRepair.count || 0
       },
-      error: null,
+      error: null
     };
-  } catch (err) {
-    return { data: null, error: err as Error };
+  } catch (error: any) {
+    console.error('Error in getDashboardStats:', error);
+    return { data: null, error };
   }
 }
 
-// ============================================================================
-// ALERTAS STOCK BAJO
-// ============================================================================
-
 export async function getAlertasStockBajo() {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('items_stock')
-    .select(`
-      *,
-      categoria:categorias_stock(*)
-    `)
-    .eq('activo', true)
-    .filter('stock_actual', 'lte', 'stock_minimo')
-    .order('descripcion');
-
-  return { data: data as ItemStock[] | null, error };
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('insumos_impresora')
+      .select('*, marca:marcas(*)');
+      
+    if (error) throw error;
+    
+    const lowStock = (data || []).filter((item: any) => item.stock_actual <= item.stock_minimo);
+    return { data: lowStock as InsumoImpresora[], error: null };
+  } catch (error: any) {
+    console.error('Error in getAlertasStockBajo:', error);
+    return { data: null, error };
+  }
 }
 
-// ============================================================================
-// TICKETS ABIERTOS (RECIENTES)
-// ============================================================================
-
-export async function getTicketsAbiertos() {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('tickets_soporte')
-    .select(`
-      *,
-      persona_afectada:personas(id, nombre, apellido),
-      puesto:puestos(id, codigo_puesto)
-    `)
-    .not('estado', 'in', '("Resuelto","Cancelado")')
-    .order('fecha_creacion', { ascending: false })
-    .limit(10);
-
-  return { data: data as TicketSoporte[] | null, error };
-}
-
-// ============================================================================
-// PEDIDOS PENDIENTES
-// ============================================================================
-
-export async function getPedidosPendientes() {
-  const supabase = getSupabaseClient();
-
-  const [tonerResult, stockResult] = await Promise.all([
-    supabase
-      .from('pedidos_toner')
+export async function getTareasRecientes(limit = 5) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('tareas_soporte')
       .select(`
         *,
-        item_stock:items_stock(id, descripcion, codigo, color),
-        persona_solicitante:personas(id, nombre, apellido),
-        sector:sectores(id, nombre)
+        solicitante:usuarios!id_solicitante(*),
+        tecnico:usuarios!id_tecnico(*),
+        puesto:puestos_trabajo(*)
       `)
-      .eq('estado', 'Pendiente')
-      .order('fecha_pedido', { ascending: false })
-      .limit(5),
-    supabase
-      .from('pedidos_stock_general')
-      .select(`
-        *,
-        item_stock:items_stock(id, descripcion, codigo),
-        persona_solicitante:personas(id, nombre, apellido),
-        sector:sectores(id, nombre)
-      `)
-      .eq('estado', 'Pendiente')
-      .order('fecha_pedido', { ascending: false })
-      .limit(5),
-  ]);
-
-  return {
-    pedidosToner: tonerResult.data as PedidoToner[] | null,
-    pedidosStock: stockResult.data as PedidoStockGeneral[] | null,
-    error: tonerResult.error || stockResult.error,
-  };
+      .in('estado', ['Abierta', 'En progreso', 'En espera'])
+      .order('created_at', { ascending: false })
+      .limit(limit);
+      
+    if (error) throw error;
+    
+    return { data: data as TareaSoporte[], error: null };
+  } catch (error: any) {
+    console.error('Error in getTareasRecientes:', error);
+    return { data: null, error };
+  }
 }

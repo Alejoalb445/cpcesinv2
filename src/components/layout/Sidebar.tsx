@@ -7,13 +7,6 @@ import {
   LayoutDashboard,
   Building2,
   Monitor,
-  Package,
-  ShoppingCart,
-  Ticket,
-  Key,
-  Camera,
-  FileText,
-  Settings,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -26,11 +19,17 @@ import {
   Cpu,
   Printer,
   Network,
-  Phone,
   HardDrive,
-  ClipboardList,
-  Box,
   Shield,
+  Keyboard,
+  Key,
+  Ticket,
+  Smartphone,
+  Truck,
+  FolderCog,
+  History,
+  Zap,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import styles from './Sidebar.module.css';
@@ -57,30 +56,38 @@ const navSections: NavSection[] = [
   {
     title: 'Organización',
     items: [
-      { label: 'Sedes', href: '/organizacion/sedes', icon: <Building2 size={20} /> },
-      { label: 'Ubicaciones', href: '/organizacion/ubicaciones', icon: <MapPin size={20} /> },
-      { label: 'Sectores', href: '/organizacion/sectores', icon: <Shield size={20} /> },
-      { label: 'Personas', href: '/organizacion/personas', icon: <Users size={20} /> },
-      { label: 'Puestos', href: '/organizacion/puestos', icon: <Briefcase size={20} /> },
+      { label: 'Ubicaciones', href: '/ubicaciones', icon: <MapPin size={20} /> },
+      { label: 'Sectores', href: '/sectores', icon: <Shield size={20} /> },
+      { label: 'Usuarios', href: '/usuarios', icon: <Users size={20} /> },
     ],
   },
   {
-    title: 'Inventario',
+    title: 'Puestos',
     items: [
-      { label: 'Activos', href: '/activos', icon: <Monitor size={20} /> },
-      { label: 'PCs / Notebooks', href: '/activos/pcs', icon: <Cpu size={20} /> },
-      { label: 'Impresoras', href: '/activos/impresoras', icon: <Printer size={20} /> },
-      { label: 'Red', href: '/activos/red', icon: <Network size={20} /> },
-      { label: 'Telefonía', href: '/activos/telefonia', icon: <Phone size={20} /> },
-      { label: 'Componentes', href: '/activos/componentes', icon: <HardDrive size={20} /> },
+      { label: 'Puestos de Trabajo', href: '/puestos', icon: <Briefcase size={20} /> },
     ],
   },
   {
-    title: 'Stock y Pedidos',
+    title: 'Equipos',
     items: [
-      { label: 'Stock Central', href: '/stock', icon: <Package size={20} /> },
-      { label: 'Pedidos', href: '/pedidos', icon: <ClipboardList size={20} /> },
-      { label: 'Compras', href: '/compras', icon: <ShoppingCart size={20} /> },
+      { label: 'PCs / Notebooks', href: '/computadoras', icon: <Cpu size={20} /> },
+      { label: 'Componentes PC', href: '/componentes', icon: <HardDrive size={20} /> },
+      { label: 'Periféricos', href: '/perifericos', icon: <Keyboard size={20} /> },
+      { label: 'Móviles', href: '/moviles', icon: <Smartphone size={20} /> },
+    ],
+  },
+  {
+    title: 'Impresión',
+    items: [
+      { label: 'Impresoras & Tóner', href: '/impresoras', icon: <Printer size={20} /> },
+    ],
+  },
+  {
+    title: 'Infraestructura',
+    items: [
+      { label: 'Red', href: '/infraestructura?tab=red', icon: <Network size={20} /> },
+      { label: 'Energía (UPS)', href: '/infraestructura?tab=energia', icon: <Zap size={20} /> },
+      { label: 'CCTV', href: '/infraestructura?tab=cctv', icon: <Camera size={20} /> },
     ],
   },
   {
@@ -88,15 +95,14 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Licencias', href: '/licencias', icon: <Key size={20} /> },
       { label: 'Soporte', href: '/soporte', icon: <Ticket size={20} /> },
-      { label: 'CCTV', href: '/cctv', icon: <Camera size={20} /> },
-      { label: 'Actas', href: '/actas', icon: <FileText size={20} /> },
+      { label: 'Historial', href: '/historial', icon: <History size={20} /> },
     ],
   },
   {
-    title: 'Sistema',
+    title: 'Administración',
     items: [
-      { label: 'Administración', href: '/admin', icon: <Settings size={20} /> },
-      { label: 'Auditoría', href: '/admin/auditoria', icon: <Box size={20} /> },
+      { label: 'Proveedores', href: '/proveedores', icon: <Truck size={20} /> },
+      { label: 'Catálogos', href: '/catalogos', icon: <FolderCog size={20} /> },
     ],
   },
 ];
@@ -122,14 +128,15 @@ export default function Sidebar() {
   };
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(href);
+    const basePath = href.split('?')[0];
+    if (basePath === '/dashboard') return pathname === '/dashboard';
+    return pathname.startsWith(basePath);
   };
 
   const getInitials = () => {
-    if (!user?.persona) return 'U';
-    const n = user.persona.nombre?.[0] || '';
-    const a = user.persona.apellido?.[0] || '';
+    if (!user) return 'U';
+    const n = user.nombre?.[0] || '';
+    const a = user.apellido?.[0] || '';
     return (n + a).toUpperCase() || 'U';
   };
 
@@ -168,7 +175,7 @@ export default function Sidebar() {
           </div>
           <div className={styles.logoText}>
             <span className={styles.logoTitle}>Inventario CPC</span>
-            <span className={styles.logoSubtitle}>Gestión IT</span>
+            <span className={styles.logoSubtitle}>Gestión IT v2.0</span>
           </div>
         </div>
 
@@ -223,9 +230,9 @@ export default function Sidebar() {
             <div className={styles.userAvatar}>{getInitials()}</div>
             <div className={styles.userDetails}>
               <div className={styles.userName}>
-                {user?.persona
-                  ? `${user.persona.nombre} ${user.persona.apellido || ''}`
-                  : user?.email || 'Usuario'}
+                {user
+                  ? `${user.nombre} ${user.apellido || ''}`
+                  : 'Usuario'}
               </div>
               <div className={styles.userRole}>{user?.role || 'Cargando...'}</div>
             </div>

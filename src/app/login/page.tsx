@@ -46,21 +46,14 @@ export default function LoginPage() {
       }
 
       if (data.user) {
-        // Check if user is active in usuarios_sistema
+        // Check if user is active in usuarios (optional check)
         const { data: usuario, error: userError } = await supabase
-          .from('usuarios_sistema')
+          .from('usuarios')
           .select('activo, rol')
           .eq('id', data.user.id)
           .single();
 
-        if (userError || !usuario) {
-          setError('No se encontró tu usuario en el sistema. Contactá al administrador.');
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        if (!usuario.activo) {
+        if (!userError && usuario && !usuario.activo) {
           setInactiveUser(true);
           await supabase.auth.signOut();
           setLoading(false);

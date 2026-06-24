@@ -1,134 +1,138 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { ComponentePc, ComponentePcInstalado, CategoriaComponente } from '@/types/database';
+import { ComponentePc, CreateDTO, UpdateDTO } from '@/types/database';
 
-// ============================================================================
-// COMPONENTES PC SERVICE
-// ============================================================================
-
-type ComponenteInsert = Omit<ComponentePc, 'id' | 'created_at' | 'updated_at' | 'categoria' | 'marca' | 'modelo'>;
-type ComponenteUpdate = Partial<ComponenteInsert>;
-
-const COMPONENTE_SELECT = `
-  *,
-  categoria:categorias_componentes(*),
-  marca:marcas(*),
-  modelo:modelos(*)
-`;
-
-export async function getComponentes(search?: string, id_categoria?: number) {
-  const supabase = getSupabaseClient();
-  let query = supabase
-    .from('componentes_pc')
-    .select(COMPONENTE_SELECT)
-    .order('created_at', { ascending: false });
-
-  if (search) {
-    query = query.or(`serial.ilike.%${search}%,codigo_interno.ilike.%${search}%,tecnologia.ilike.%${search}%`);
+export async function getComponentes(search?: string, tipo?: string, en_stock?: boolean) {
+  try {
+    const supabase = getSupabaseClient();
+    let query = supabase
+      .from('componentes_pc')
+      .select('*, marca:marcas(*), modelo:modelos(*), computadora:computadoras(*)');
+    
+    if (tipo) {
+      query = query.eq('tipo', tipo);
+    }
+    
+    if (en_stock !== undefined) {
+      query = query.eq('en_stock', en_stock);
+    }
+    
+    if (search) {
+      query = query.or(`serial.ilike.%${search}%,detalle.ilike.%${search}%,capacidad.ilike.%${search}%`);
+    }
+    
+    query = query.order('created_at', { ascending: false });
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    return { data: data as ComponentePc[], error: null };
+  } catch (error: any) {
+    console.error('Error in getComponentes:', error);
+    return { data: null, error };
   }
-  if (id_categoria) query = query.eq('id_categoria', id_categoria);
+}
 
-  const { data, error } = await query;
-  return { data: data as ComponentePc[] | null, error };
+export async function getComponentesByComputadora(id_computadora: number) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('componentes_pc')
+      .select('*, marca:marcas(*), modelo:modelos(*)')
+      .eq('id_computadora', id_computadora)
+      .order('tipo', { ascending: true });
+    if (error) throw error;
+    
+    return { data: data as ComponentePc[], error: null };
+  } catch (error: any) {
+    console.error(`Error in getComponentesByComputadora(${id_computadora}):`, error);
+    return { data: null, error };
+  }
 }
 
 export async function getComponenteById(id: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('componentes_pc')
-    .select(COMPONENTE_SELECT)
-    .eq('id', id)
-    .single();
-
-  return { data: data as ComponentePc | null, error };
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('componentes_pc')
+      .select('*, marca:marcas(*), modelo:modelos(*), computadora:computadoras(*)')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    
+    return { data: data as ComponentePc, error: null };
+  } catch (error: any) {
+    console.error(`Error in getComponenteById(${id}):`, error);
+    return { data: null, error };
+  }
 }
 
-export async function createComponente(data: ComponenteInsert) {
-  const supabase = getSupabaseClient();
-  const { data: result, error } = await supabase
-    .from('componentes_pc')
-    .insert(data)
-    .select(COMPONENTE_SELECT)
-    .single();
-
-  return { data: result as ComponentePc | null, error };
+export async function createComponente(data: CreateDTO<ComponentePc>) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data: createdData, error } = await supabase
+      .from('componentes_pc')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: createdData as ComponentePc, error: null };
+  } catch (error: any) {
+    console.error('Error in createComponente:', error);
+    return { data: null, error };
+  }
 }
 
-export async function updateComponente(id: number, data: ComponenteUpdate) {
-  const supabase = getSupabaseClient();
-  const { data: result, error } = await supabase
-    .from('componentes_pc')
-    .update(data)
-    .eq('id', id)
-    .select(COMPONENTE_SELECT)
-    .single();
-
-  return { data: result as ComponentePc | null, error };
+export async function updateComponente(id: number, data: UpdateDTO<ComponentePc>) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data: updatedData, error } = await supabase
+      .from('componentes_pc')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: updatedData as ComponentePc, error: null };
+  } catch (error: any) {
+    console.error(`Error in updateComponente(${id}):`, error);
+    return { data: null, error };
+  }
 }
 
-// ============================================================================
-// COMPONENTES INSTALADOS
-// ============================================================================
-
-export async function getComponentesInstalados(id_pc: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('componentes_pc_instalados')
-    .select(`
-      *,
-      componente:componentes_pc(
-        *,
-        categoria:categorias_componentes(*),
-        marca:marcas(*),
-        modelo:modelos(*)
-      )
-    `)
-    .eq('id_pc', id_pc)
-    .is('fecha_retiro', null)
-    .order('fecha_instalacion', { ascending: false });
-
-  return { data: data as ComponentePcInstalado[] | null, error };
+export async function instalarComponente(id_componente: number, id_computadora: number) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('componentes_pc')
+      .update({ id_computadora, en_stock: false })
+      .eq('id', id_componente)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: data as ComponentePc, error: null };
+  } catch (error: any) {
+    console.error(`Error in instalarComponente(${id_componente}, ${id_computadora}):`, error);
+    return { data: null, error };
+  }
 }
 
-export async function instalarComponente(data: Omit<ComponentePcInstalado, 'id' | 'created_at' | 'componente'>) {
-  const supabase = getSupabaseClient();
-  const { data: result, error } = await supabase
-    .from('componentes_pc_instalados')
-    .insert(data)
-    .select(`
-      *,
-      componente:componentes_pc(*)
-    `)
-    .single();
-
-  return { data: result as ComponentePcInstalado | null, error };
-}
-
-export async function retirarComponente(id_instalacion: number, retirado_por: string) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('componentes_pc_instalados')
-    .update({
-      fecha_retiro: new Date().toISOString(),
-      retirado_por,
-    })
-    .eq('id', id_instalacion)
-    .select()
-    .single();
-
-  return { data: data as ComponentePcInstalado | null, error };
-}
-
-// ============================================================================
-// CATEGORÍAS COMPONENTES
-// ============================================================================
-
-export async function getCategoriasComponentes() {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('categorias_componentes')
-    .select('*')
-    .eq('activo', true)
-    .order('nombre');
-
-  return { data: data as CategoriaComponente[] | null, error };
+export async function retirarComponente(id_componente: number) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('componentes_pc')
+      .update({ id_computadora: null, en_stock: true })
+      .eq('id', id_componente)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: data as ComponentePc, error: null };
+  } catch (error: any) {
+    console.error(`Error in retirarComponente(${id_componente}):`, error);
+    return { data: null, error };
+  }
 }

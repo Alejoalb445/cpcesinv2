@@ -1,356 +1,354 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Key, 
+  Search, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  X, 
+  UserPlus, 
+  UserMinus, 
+  ChevronDown, 
+  ChevronUp,
+  User
+} from 'lucide-react';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { Licencia, LicenciaAsignada, Proveedor, Persona, Puesto, Sector } from '@/types/database';
-import { Key, Plus, Search, Pencil, Trash2, X, Users, Briefcase, UserCheck, Shield, Cpu } from 'lucide-react';
-import { toast } from 'sonner';
 import styles from '@/styles/module.module.css';
-
-const TIPO_LICENCIA_OPTIONS = ['OEM', 'Por usuario', 'Por equipo', 'Volumen', 'Suscripción', 'Perpetua', 'Otra'];
-const ESTADO_OPTIONS = ['Activa', 'Vencida', 'Suspendida', 'Cancelada'];
-
-interface LicenciaForm {
-  software: string;
-  fabricante: string;
-  tipo: string;
-  clave_producto: string;
-  cantidad_total: number | '';
-  id_proveedor: number | '';
-  fecha_compra: string;
-  fecha_vencimiento: string;
-  estado: string;
-  notas: string;
-}
-
-interface AsignarForm {
-  id_pc: number | '';
-  id_persona: number | '';
-  id_puesto: number | '';
-  id_sector: number | '';
-  notas: string;
-}
-
-const emptyForm: LicenciaForm = {
-  software: '',
-  fabricante: '',
-  tipo: 'Suscripción',
-  clave_producto: '',
-  cantidad_total: 1,
-  id_proveedor: '',
-  fecha_compra: '',
-  fecha_vencimiento: '',
-  estado: 'Activa',
-  notas: '',
-};
-
-const emptyAsignar: AsignarForm = {
-  id_pc: '',
-  id_persona: '',
-  id_puesto: '',
-  id_sector: '',
-  notas: '',
-};
-
-type JoinedLicencia = Licencia & {
-  proveedor: Proveedor | null;
-};
+import { toast } from 'sonner';
 
 export default function LicenciasPage() {
   const supabase = getSupabaseClient();
 
-  const [items, setItems] = useState<JoinedLicencia[]>([]);
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [personas, setPersonas] = useState<Persona[]>([]);
-  const [puestos, setPuestos] = useState<Puesto[]>([]);
-  const [sectores, setSectores] = useState<Sector[]>([]);
-  const [pcs, setPcs] = useState<any[]>([]);
-
+  // Loading states
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterEstado, setFilterEstado] = useState('');
 
-  // Selected license for assignments details
-  const [selectedItem, setSelectedItem] = useState<JoinedLicencia | null>(null);
-  const [assignments, setAssignments] = useState<LicenciaAsignada[]>([]);
-  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  // Data states
+  const [licencias, setLicencias] = useState<any[]>([]);
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+  const [proveedores, setProveedores] = useState<any[]>([]);
+
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
 
   // Modals state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<JoinedLicencia | null>(null);
-  const [form, setForm] = useState<LicenciaForm>(emptyForm);
-  const [saving, setSaving] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'create' | 'edit'>('create');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  const [assignOpen, setAssignOpen] = useState(false);
-  const [assignForm, setAssignForm] = useState<AsignarForm>(emptyAsignar);
-  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    const [licRes, provRes, persRes, puestoRes, secRes, pcsRes] = await Promise.all([
-      supabase
-        .from('licencias')
-        .select('*, proveedor:proveedores(*)')
-        .order('software'),
-      supabase.from('proveedores').select('*').eq('activo', true).order('nombre'),
-      supabase.from('personas').select('*').eq('activo', true).order('nombre'),
-      supabase.from('puestos').select('*').order('codigo_puesto'),
-      supabase.from('sectores').select('*').eq('activo', true).order('nombre'),
-      supabase.from('activos_pc').select('*, activo:activos(codigo_interno, id_marca, id_modelo, marcas(nombre), modelos(nombre))'),
-    ]);
-
-    if (licRes.data) setItems(licRes.data as JoinedLicencia[]);
-    if (provRes.data) setProveedores(provRes.data as Proveedor[]);
-    if (persRes.data) setPersonas(persRes.data as Persona[]);
-    if (puestoRes.data) setPuestos(puestoRes.data as Puesto[]);
-    if (secRes.data) setSectores(secRes.data as Sector[]);
-    if (pcsRes.data) setPcs(pcsRes.data as any[]);
-
-    setLoading(false);
-  }, [supabase]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Load assignments when selection changes
-  const loadAssignments = useCallback(async (licId: number) => {
-    setLoadingAssignments(true);
-    const { data, error } = await supabase
-      .from('licencias_asignadas')
-      .select('*, persona:personas(*), puesto:puestos(*), sector:sectores(*)')
-      .eq('id_licencia', licId)
-      .is('fecha_liberado', null)
-      .order('fecha_asignado', { ascending: false });
-
-    if (error) {
-      toast.error('Error al cargar asignaciones de licencias');
-      console.error(error);
-    } else {
-      setAssignments(data as LicenciaAsignada[]);
-    }
-    setLoadingAssignments(false);
-  }, [supabase]);
-
-  useEffect(() => {
-    if (selectedItem) {
-      loadAssignments(selectedItem.id);
-    } else {
-      setAssignments([]);
-    }
-  }, [selectedItem, loadAssignments]);
-
-  const filtered = items.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      item.software.toLowerCase().includes(term) ||
-      (item.fabricante || '').toLowerCase().includes(term) ||
-      (item.clave_producto || '').toLowerCase().includes(term);
-
-    const matchesEstado = filterEstado ? item.estado === filterEstado : true;
-    return matchesSearch && matchesEstado;
+  // Assignment Modal
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedLicencia, setSelectedLicencia] = useState<any>(null);
+  const [assignForm, setAssignForm] = useState({
+    id_usuario: '',
+    notas: ''
   });
 
-  function openModal(item?: JoinedLicencia) {
-    setErrors({});
-    if (item) {
-      setEditingItem(item);
-      setForm({
-        software: item.software,
-        fabricante: item.fabricante || '',
-        tipo: item.tipo || 'Suscripción',
-        clave_producto: item.clave_producto || '',
-        cantidad_total: item.cantidad_total ?? 1,
-        id_proveedor: item.id_proveedor || '',
-        fecha_compra: item.fecha_compra ? item.fecha_compra.substring(0, 10) : '',
-        fecha_vencimiento: item.fecha_vencimiento ? item.fecha_vencimiento.substring(0, 10) : '',
-        estado: item.estado || 'Activa',
-        notes: item.notas || '', // handle fallback
-      } as any);
-    } else {
-      setEditingItem(null);
-      setForm(emptyForm);
-    }
-    setModalOpen(true);
-  }
+  // Confirm actions state
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    type: 'delete' | 'release';
+    id: number;
+    title: string;
+    message: string;
+  }>({ type: 'delete', id: 0, title: '', message: '' });
 
-  function closeModal() {
-    setModalOpen(false);
-    setEditingItem(null);
-    setForm(emptyForm);
-    setErrors({});
-  }
+  // Accordion/Expanded license IDs for showing assigned users
+  const [expandedLicencias, setExpandedLicencias] = useState<number[]>([]);
 
-  function openAssign(item: JoinedLicencia) {
-    setErrors({});
-    setSelectedItem(item);
-    setAssignForm(emptyAsignar);
-    setAssignOpen(true);
-  }
+  // Form states (CRUD)
+  const [licenciaForm, setLicenciaForm] = useState({
+    nombre_software: '',
+    version: '',
+    tipo_licencia: 'Suscripción anual',
+    clave_licencia: '',
+    cantidad_puestos: '',
+    id_proveedor: '',
+    fecha_compra: '',
+    fecha_vencimiento: '',
+    costo: '',
+    estado: 'Vigente',
+    notas: ''
+  });
 
-  function closeAssign() {
-    setAssignOpen(false);
-    setAssignForm(emptyAsignar);
-  }
+  // Load catalogs on mount
+  useEffect(() => {
+    async function loadCatalogos() {
+      try {
+        const [
+          { data: proveedoresData },
+          { data: usuariosData }
+        ] = await Promise.all([
+          supabase.from('proveedores').select('id, razon_social').order('razon_social'),
+          supabase.from('usuarios').select('id, nombre, apellido, email').order('apellido')
+        ]);
 
-  function validate(): boolean {
-    const newErrors: Partial<Record<string, string>> = {};
-    if (!form.software.trim()) newErrors.software = 'El nombre de software es obligatorio';
-    if (!form.cantidad_total || Number(form.cantidad_total) <= 0) {
-      newErrors.cantidad_total = 'La cantidad total debe ser mayor a 0';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }
-
-  async function handleSave() {
-    if (!validate()) return;
-    setSaving(true);
-
-    const payload = {
-      software: form.software.trim(),
-      fabricante: form.fabricante.trim() || null,
-      tipo: form.tipo,
-      clave_producto: form.clave_producto.trim() || null,
-      cantidad_total: Number(form.cantidad_total),
-      id_proveedor: form.id_proveedor ? Number(form.id_proveedor) : null,
-      fecha_compra: form.fecha_compra || null,
-      fecha_vencimiento: form.fecha_vencimiento || null,
-      estado: form.estado,
-      notas: (form as any).notes?.trim() || null,
-    };
-
-    if (editingItem) {
-      const { error } = await supabase
-        .from('licencias')
-        .update(payload)
-        .eq('id', editingItem.id);
-
-      if (error) {
-        toast.error('Error al actualizar la licencia');
-        console.error(error);
-      } else {
-        toast.success('Licencia actualizada correctamente');
-        closeModal();
-        loadData();
-      }
-    } else {
-      const { error } = await supabase
-        .from('licencias')
-        .insert({
-          ...payload,
-          cantidad_en_uso: 0,
-        });
-
-      if (error) {
-        toast.error('Error al registrar la licencia');
-        console.error(error);
-      } else {
-        toast.success('Licencia registrada correctamente');
-        closeModal();
-        loadData();
+        if (proveedoresData) setProveedores(proveedoresData);
+        if (usuariosData) setUsuarios(usuariosData);
+      } catch (err) {
+        console.error('Error cargando catálogos:', err);
+        toast.error('Error al cargar datos auxiliares');
       }
     }
-    setSaving(false);
-  }
+    loadCatalogos();
+  }, []);
 
-  async function handleAssign() {
-    if (!selectedItem) return;
+  // Fetch licenses data with joins
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('licencias')
+        .select(`
+          *,
+          proveedores(id, razon_social),
+          licencias_usuarios(
+            id,
+            id_usuario,
+            fecha_asignacion,
+            notas,
+            usuarios(id, nombre, apellido, email)
+          )
+        `)
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+      setLicencias(data || []);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Error al cargar licencias: ${err.message || err.details}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Filtering
+  const filteredLicencias = licencias.filter(item => {
+    const software = item.nombre_software || '';
+    const notes = item.notas || '';
+    const key = item.clave_licencia || '';
     
-    const { id_pc, id_persona, id_puesto, id_sector, notas } = assignForm;
-    if (!id_pc && !id_persona && !id_puesto && !id_sector) {
-      toast.error('Debe seleccionar al menos un destino para asignar la licencia (Equipo, Persona, Puesto o Sector)');
-      return;
-    }
+    const matchSearch = 
+      software.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notes.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      key.toLowerCase().includes(searchQuery.toLowerCase());
 
-    setSaving(true);
-    // 1. Insert assignment
-    const { error: insError } = await supabase
-      .from('licencias_asignadas')
-      .insert({
-        id_licencia: selectedItem.id,
-        id_pc: id_pc ? Number(id_pc) : null,
-        id_persona: id_persona ? Number(id_persona) : null,
-        id_puesto: id_puesto ? Number(id_puesto) : null,
-        id_sector: id_sector ? Number(id_sector) : null,
-        fecha_asignado: new Date().toISOString(),
-        estado: 'Asignada',
-        notas: notas.trim() || null,
-      });
+    const matchEstado = filterEstado ? item.estado === filterEstado : true;
+    const matchTipo = filterTipo ? item.tipo_licencia === filterTipo : true;
 
-    if (insError) {
-      toast.error('Error al crear la asignación');
-      console.error(insError);
-      setSaving(false);
-      return;
-    }
+    return matchSearch && matchEstado && matchTipo;
+  });
 
-    // 2. Call RPC to increment cantidad_en_uso
-    const { error: rpcError } = await supabase.rpc('incrementar_uso_licencia', {
-      p_id_licencia: selectedItem.id,
-    });
-
-    if (rpcError) {
-      toast.error('Asignado pero no se pudo actualizar el total de uso');
-      console.error(rpcError);
+  // Expand / Collapse details
+  const toggleExpand = (id: number) => {
+    if (expandedLicencias.includes(id)) {
+      setExpandedLicencias(expandedLicencias.filter(x => x !== id));
     } else {
-      toast.success('Licencia asignada correctamente');
-      loadAssignments(selectedItem.id);
-      loadData();
-      closeAssign();
+      setExpandedLicencias([...expandedLicencias, id]);
     }
-    setSaving(false);
-  }
+  };
 
-  async function handleRelease(idAsignacion: number) {
-    if (!selectedItem) return;
-    setSaving(true);
+  // Open CRUD Modal
+  const handleOpenAdd = () => {
+    setModalType('create');
+    setSelectedItem(null);
+    setLicenciaForm({
+      nombre_software: '',
+      version: '',
+      tipo_licencia: 'Suscripción anual',
+      clave_licencia: '',
+      cantidad_puestos: '',
+      id_proveedor: '',
+      fecha_compra: '',
+      fecha_vencimiento: '',
+      costo: '',
+      estado: 'Vigente',
+      notas: ''
+    });
+    setIsModalOpen(true);
+  };
 
-    // 1. Update assignment to set fecha_liberado
-    const { error: updError } = await supabase
-      .from('licencias_asignadas')
-      .update({
-        fecha_liberado: new Date().toISOString(),
-        estado: 'Liberada',
-      })
-      .eq('id', idAsignacion);
+  const handleOpenEdit = (item: any) => {
+    setModalType('edit');
+    setSelectedItem(item);
+    setLicenciaForm({
+      nombre_software: item.nombre_software,
+      version: item.version || '',
+      tipo_licencia: item.tipo_licencia,
+      clave_licencia: item.clave_licencia || '',
+      cantidad_puestos: item.cantidad_puestos !== null && item.cantidad_puestos !== undefined ? String(item.cantidad_puestos) : '',
+      id_proveedor: item.id_proveedor ? String(item.id_proveedor) : '',
+      fecha_compra: item.fecha_compra || '',
+      fecha_vencimiento: item.fecha_vencimiento || '',
+      costo: item.costo !== null && item.costo !== undefined ? String(item.costo) : '',
+      estado: item.estado,
+      notas: item.notas || ''
+    });
+    setIsModalOpen(true);
+  };
 
-    if (updError) {
-      toast.error('Error al liberar la asignación');
-      console.error(updError);
-      setSaving(false);
+  // CRUD Form submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!licenciaForm.nombre_software.trim()) {
+      toast.error('El nombre del software es obligatorio');
       return;
     }
 
-    // 2. Call RPC to decrement
-    const { error: rpcError } = await supabase.rpc('decrementar_uso_licencia', {
-      p_id_licencia: selectedItem.id,
+    try {
+      const payload = {
+        nombre_software: licenciaForm.nombre_software.trim(),
+        version: licenciaForm.version || null,
+        tipo_licencia: licenciaForm.tipo_licencia,
+        clave_licencia: licenciaForm.clave_licencia || null,
+        cantidad_puestos: licenciaForm.cantidad_puestos ? parseInt(licenciaForm.cantidad_puestos) : null,
+        id_proveedor: licenciaForm.id_proveedor ? parseInt(licenciaForm.id_proveedor) : null,
+        fecha_compra: licenciaForm.fecha_compra || null,
+        fecha_vencimiento: licenciaForm.fecha_vencimiento || null,
+        costo: licenciaForm.costo ? parseFloat(licenciaForm.costo) : null,
+        estado: licenciaForm.estado,
+        notas: licenciaForm.notas || null
+      };
+
+      if (modalType === 'create') {
+        const { error } = await supabase
+          .from('licencias')
+          .insert([{ ...payload, puestos_usados: 0 }]); // initial usage 0
+
+        if (error) throw error;
+        toast.success('Licencia creada con éxito');
+      } else {
+        const { error } = await supabase
+          .from('licencias')
+          .update(payload)
+          .eq('id', selectedItem.id);
+
+        if (error) throw error;
+        toast.success('Licencia actualizada con éxito');
+      }
+
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Error al guardar: ${err.message || err.details}`);
+    }
+  };
+
+  // Assign License
+  const handleOpenAssign = (licencia: any) => {
+    setSelectedLicencia(licencia);
+    setAssignForm({
+      id_usuario: '',
+      notas: ''
     });
+    setIsAssignModalOpen(true);
+  };
 
-    if (rpcError) {
-      toast.error('Liberada pero no se pudo actualizar el contador');
-      console.error(rpcError);
-    } else {
-      toast.success('Licencia liberada correctamente');
-      loadAssignments(selectedItem.id);
-      loadData();
-    }
-    setSaving(false);
-  }
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  function getEstadoBadge(estado: string) {
-    switch (estado) {
-      case 'Activa':
-        return styles.badgeActive;
-      case 'Vencida':
-      case 'Cancelada':
-        return styles.badgeInactive;
-      case 'Suspendida':
-        return styles.badgeWarning;
-      default:
-        return styles.badgeNeutral;
+    if (!assignForm.id_usuario) {
+      toast.error('Debe seleccionar un usuario');
+      return;
     }
-  }
+
+    // Verify slots
+    const totalPuestos = selectedLicencia.cantidad_puestos;
+    const puestosUsados = selectedLicencia.puestos_usados || 0;
+
+    if (totalPuestos !== null && puestosUsados >= totalPuestos) {
+      toast.error('No quedan puestos disponibles para esta licencia');
+      return;
+    }
+
+    // Check if already assigned
+    const alreadyAssigned = selectedLicencia.licencias_usuarios?.some(
+      (lu: any) => lu.id_usuario === assignForm.id_usuario
+    );
+
+    if (alreadyAssigned) {
+      toast.error('Esta licencia ya está asignada a este usuario');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('licencias_usuarios')
+        .insert([{
+          id_licencia: selectedLicencia.id,
+          id_usuario: assignForm.id_usuario,
+          fecha_asignacion: new Date().toISOString(),
+          notas: assignForm.notas || null
+        }]);
+
+      if (error) throw error;
+
+      toast.success('Licencia asignada correctamente. Uso actualizado.');
+      setIsAssignModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Error al asignar: ${err.message || err.details}`);
+    }
+  };
+
+  // Release License Confirm
+  const handleOpenRelease = (assignmentId: number, softwareName: string, userName: string) => {
+    setConfirmConfig({
+      type: 'release',
+      id: assignmentId,
+      title: '¿Liberar puesto de licencia?',
+      message: `¿Estás seguro de que deseas desvincular a ${userName} de la licencia ${softwareName}?`
+    });
+    setIsConfirmOpen(true);
+  };
+
+  // Delete License Confirm
+  const handleOpenDelete = (id: number, softwareName: string) => {
+    setConfirmConfig({
+      type: 'delete',
+      id,
+      title: '¿Eliminar licencia?',
+      message: `Esta acción no se puede deshacer. Se eliminarán todas las asignaciones asociadas a la licencia ${softwareName}.`
+    });
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmAction = async () => {
+    setIsConfirmOpen(false);
+    try {
+      if (confirmConfig.type === 'delete') {
+        const { error } = await supabase
+          .from('licencias')
+          .delete()
+          .eq('id', confirmConfig.id);
+
+        if (error) throw error;
+        toast.success('Licencia eliminada con éxito');
+      } else {
+        const { error } = await supabase
+          .from('licencias_usuarios')
+          .delete()
+          .eq('id', confirmConfig.id);
+
+        if (error) throw error;
+        toast.success('Licencia liberada con éxito');
+      }
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Error al realizar acción: ${err.message || err.details}`);
+    }
+  };
 
   return (
     <div className={styles.page}>
@@ -362,351 +360,486 @@ export default function LicenciasPage() {
           </div>
           <div>
             <h1 className={styles.pageTitle}>Licencias de Software</h1>
-            <p className={styles.pageSubtitle}>Inventario de claves, suscripciones y asignación de asientos</p>
+            <p className={styles.pageSubtitle}>Administración de claves, vencimientos y asignación a usuarios</p>
           </div>
         </div>
-        <button className={styles.addBtn} onClick={() => openModal()}>
-          <Plus size={18} /> Nueva Licencia
+        <button className={styles.addBtn} onClick={handleOpenAdd}>
+          <Plus size={16} />
+          Nueva Licencia
         </button>
       </div>
 
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <div className={styles.searchWrapper}>
-          <Search size={16} className={styles.searchIcon} />
-          <input
-            type="text"
+          <Search size={18} className={styles.searchIcon} />
+          <input 
+            type="text" 
+            placeholder="Buscar por software, clave o notas..."
             className={styles.searchInput}
-            placeholder="Buscar por software, fabricante o clave..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+
+        <select 
+          className={styles.filterSelect}
+          value={filterTipo}
+          onChange={(e) => setFilterTipo(e.target.value)}
+        >
+          <option value="">Tipos (Todos)</option>
+          <option value="Perpetua">Perpetua</option>
+          <option value="Suscripción mensual">Suscripción mensual</option>
+          <option value="Suscripción anual">Suscripción anual</option>
+          <option value="OEM">OEM</option>
+          <option value="Volumen">Volumen</option>
+          <option value="Freeware">Freeware</option>
+          <option value="Open Source">Open Source</option>
+        </select>
+
+        <select 
+          className={styles.filterSelect}
+          value={filterEstado}
+          onChange={(e) => setFilterEstado(e.target.value)}
+        >
+          <option value="">Estados (Todos)</option>
+          <option value="Vigente">Vigente</option>
+          <option value="Por vencer">Por vencer</option>
+          <option value="Vencida">Vencida</option>
+          <option value="Cancelada">Cancelada</option>
+        </select>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedItem ? '1.8fr 1.2fr' : '1fr', gap: 'var(--space-5)', transition: 'all 0.3s' }}>
-        {/* Table List */}
-        <div className={styles.table}>
-          <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 1.2fr 1fr 70px 70px 110px 100px 140px' }}>
-            <span>Software</span>
-            <span>Fabricante</span>
-            <span>Tipo</span>
-            <span>Total</span>
-            <span>Uso</span>
-            <span>Vencimiento</span>
-            <span>Estado</span>
-            <span>Acciones</span>
-          </div>
-
-          {loading ? (
-            <div className={styles.loadingState}><div className={styles.spinner} /><span>Cargando...</span></div>
-          ) : filtered.length === 0 ? (
-            <div className={styles.emptyState}><Key size={48} className={styles.emptyIcon} /><p>No se encontraron licencias</p></div>
-          ) : (
-            filtered.map((item) => (
-              <div
-                key={item.id}
-                className={`${styles.tableRowItem} ${selectedItem?.id === item.id ? styles.activeRow : ''}`}
-                style={{ gridTemplateColumns: '2fr 1.2fr 1fr 70px 70px 110px 100px 140px', background: selectedItem?.id === item.id ? 'var(--bg-hover)' : undefined }}
-                onClick={() => setSelectedItem(item)}
-              >
-                <span className={styles.rowText} style={{ fontWeight: 600 }}>{item.software}</span>
-                <span className={styles.rowText}>{item.fabricante || '—'}</span>
-                <span>{item.tipo}</span>
-                <span style={{ fontWeight: 600 }}>{item.cantidad_total}</span>
-                <span style={{ fontWeight: 600, color: item.cantidad_en_uso >= item.cantidad_total ? 'var(--danger)' : undefined }}>
-                  {item.cantidad_en_uso}
-                </span>
-                <span>{item.fecha_vencimiento ? new Date(item.fecha_vencimiento).toLocaleDateString() : 'Perpetua'}</span>
-                <span><span className={`${styles.badge} ${getEstadoBadge(item.estado)}`}>{item.estado}</span></span>
-                <div className={styles.actions} onClick={(e) => e.stopPropagation()}>
-                  <button className={styles.actionBtn} onClick={() => openAssign(item)} title="Asignar Licencia" style={{ color: 'var(--accent-primary)' }}>
-                    <Plus size={14} /> Asignar
-                  </button>
-                  <button className={styles.actionBtn} onClick={() => openModal(item)} title="Editar">
-                    <Pencil size={14} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+      {/* Licenses list */}
+      {loading ? (
+        <div className={styles.loadingState}>
+          <div className={styles.spinner} />
+          <span>Cargando licencias...</span>
         </div>
-
-        {/* Assignments Panel */}
-        {selectedItem && (
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)', height: 'fit-content' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--border-secondary)', paddingBottom: '10px' }}>
-              <div>
-                <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--text-primary)' }}>Asignaciones Activas</h3>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Software: {selectedItem.software}</span>
-              </div>
-              <button className={styles.modalCloseBtn} onClick={() => setSelectedItem(null)}><X size={18} /></button>
+      ) : (
+        filteredLicencias.length === 0 ? (
+          <div className={styles.emptyState}>
+            <Key size={48} className={styles.emptyIcon} />
+            <h3 className={styles.emptyTitle}>No se encontraron licencias</h3>
+            <p className={styles.emptyText}>Agregá un software con su respectiva clave de activación.</p>
+          </div>
+        ) : (
+          <div className={styles.table}>
+            <div className={styles.tableHeader} style={{ gridTemplateColumns: '40px 2fr 1.2fr 1.2fr 1.2fr 1.5fr 1fr 150px' }}>
+              <div></div>
+              <div>Software</div>
+              <div>Versión</div>
+              <div>Tipo</div>
+              <div>Uso (Puestos)</div>
+              <div>Vencimiento</div>
+              <div>Estado</div>
+              <div style={{ textAlign: 'right' }}>Acciones</div>
             </div>
 
-            {loadingAssignments ? (
-              <div className={styles.loadingState}><div className={styles.spinner} /><span>Cargando asignaciones...</span></div>
-            ) : assignments.length === 0 ? (
-              <div className={styles.emptyState} style={{ padding: 'var(--space-6)' }}>
-                <Users size={36} className={styles.emptyIcon} />
-                <p style={{ fontSize: 'var(--text-sm)' }}>No hay asignaciones activas</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                {assignments.map((asg) => (
-                  <div key={asg.id} style={{ padding: 'var(--space-3)', background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>
-                        {asg.id_pc && <><Cpu size={14} /> Equipo PC</>}
-                        {asg.id_persona && <><UserCheck size={14} /> {asg.persona?.nombre} {asg.persona?.apellido || ''}</>}
-                        {asg.id_puesto && <><Briefcase size={14} /> Puesto: {asg.puesto?.codigo_puesto}</>}
-                        {asg.id_sector && <><Shield size={14} /> Sector: {asg.sector?.nombre}</>}
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Asignado el {new Date(asg.fecha_asignado).toLocaleDateString()}</span>
-                      {asg.notas && <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Notas: {asg.notas}</span>}
-                    </div>
-                    <button className={styles.deleteBtn} style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }} onClick={() => handleRelease(asg.id)} disabled={saving}>
-                      Liberar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+            {filteredLicencias.map((item) => {
+              const total = item.cantidad_puestos;
+              const usados = item.puestos_usados || 0;
+              const diponibles = total !== null ? total - usados : 'Ilimitados';
+              const esExpandido = expandedLicencias.includes(item.id);
+              const asignaciones = item.licencias_usuarios || [];
 
-      {/* Detail/Create/Edit Modal */}
-      {modalOpen && (
-        <div className={styles.modalOverlay} onClick={closeModal}>
-          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
+              return (
+                <React.Fragment key={item.id}>
+                  {/* Row */}
+                  <div className={styles.tableRowItem} style={{ gridTemplateColumns: '40px 2fr 1.2fr 1.2fr 1.2fr 1.5fr 1fr 150px' }}>
+                    <button 
+                      onClick={() => toggleExpand(item.id)}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      {esExpandido ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                    
+                    <div className={styles.rowText} style={{ fontWeight: 600 }}>
+                      {item.nombre_software}
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal', fontFamily: 'monospace' }}>
+                        Clave: {item.clave_licencia ? item.clave_licencia : 'Sin clave guardada'}
+                      </span>
+                    </div>
+
+                    <div className={styles.rowText}>{item.version || 'N/A'}</div>
+                    
+                    <div>
+                      <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                        {item.tipo_licencia}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span style={{ fontWeight: 600, color: total !== null && usados >= total ? 'var(--danger-text)' : 'inherit' }}>
+                        {usados}
+                      </span>
+                      <span> / {total !== null ? total : '∞'}</span>
+                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                        {total !== null ? `(${diponibles} libres)` : 'Libres'}
+                      </span>
+                    </div>
+
+                    <div>
+                      {item.fecha_vencimiento ? new Date(item.fecha_vencimiento).toLocaleDateString('es-AR') : 'Sin Vto'}
+                    </div>
+
+                    <div>
+                      <span className={`${styles.badge} ${
+                        item.estado === 'Vigente' ? styles.badgeActive : 
+                        item.estado === 'Por vencer' ? styles.badgeWarning : styles.badgeInactive
+                      }`}>
+                        {item.estado}
+                      </span>
+                    </div>
+
+                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                      <button 
+                        className={styles.actionBtn} 
+                        onClick={() => handleOpenAssign(item)}
+                        title="Asignar a Usuario"
+                        disabled={total !== null && usados >= total}
+                        style={{ color: 'var(--success-text)' }}
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                      <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
+                        <Edit size={14} />
+                      </button>
+                      <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, item.nombre_software)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded assignments section */}
+                  {esExpandido && (
+                    <div style={{ 
+                      gridColumn: '1 / span 8', 
+                      background: 'var(--bg-tertiary)', 
+                      padding: '16px 24px', 
+                      borderBottom: '1px solid var(--border-secondary)',
+                      animation: 'fadeIn 0.2s ease-out'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                          Usuarios Asignados ({asignaciones.length})
+                        </h4>
+                        {total !== null && (
+                          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                            Puestos ocupados: {usados} de {total}
+                          </span>
+                        )}
+                      </div>
+
+                      {asignaciones.length === 0 ? (
+                        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                          No hay usuarios asociados a esta licencia.
+                        </p>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                          {asignaciones.map((lu: any) => {
+                            const u = lu.usuarios || {};
+                            const userName = u.nombre ? `${u.nombre} ${u.apellido || ''}` : 'Usuario Desconocido';
+                            return (
+                              <div key={lu.id} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                background: 'var(--bg-secondary)', 
+                                border: '1px solid var(--border-primary)', 
+                                padding: '8px 12px', 
+                                borderRadius: 'var(--radius-md)' 
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                  <User size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                                  <div style={{ overflow: 'hidden' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 500, display: 'block' }} className={styles.rowText}>
+                                      {userName}
+                                    </span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'block' }} className={styles.rowText}>
+                                      {u.email || ''}
+                                    </span>
+                                    {lu.notas && (
+                                      <span style={{ fontSize: '10px', color: 'var(--accent-primary)', display: 'block' }} className={styles.rowText}>
+                                        Nota: {lu.notas}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <button 
+                                  onClick={() => handleOpenRelease(lu.id, item.nombre_software, userName)}
+                                  style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    color: 'var(--danger-text)', 
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    borderRadius: 'var(--radius-sm)'
+                                  }}
+                                  title="Liberar puesto"
+                                >
+                                  <UserMinus size={14} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {/* CRUD MODAL */}
+      {isModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalWide} style={{ maxHeight: '90vh' }}>
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>
-                {editingItem ? 'Editar Licencia' : 'Nueva Licencia de Software'}
-              </h2>
-              <button className={styles.modalCloseBtn} onClick={closeModal}>
+              <h3 className={styles.modalTitle}>
+                {modalType === 'create' ? 'Agregar ' : 'Editar '}
+                Licencia
+              </h3>
+              <button className={styles.modalCloseBtn} onClick={() => setIsModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
-            <div className={styles.modalBody}>
-              <div className={styles.fieldRow}>
+
+            <form onSubmit={handleSubmit}>
+              <div className={styles.modalBody}>
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Software *</label>
-                  <input
-                    type="text"
+                  <input 
+                    type="text" 
                     className={styles.fieldInput}
-                    value={form.software}
-                    onChange={(e) => setForm({ ...form, software: e.target.value })}
-                    placeholder="Nombre del software"
-                  />
-                  {errors.software && <span className={styles.fieldError}>{errors.software}</span>}
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Fabricante</label>
-                  <input
-                    type="text"
-                    className={styles.fieldInput}
-                    value={form.fabricante}
-                    onChange={(e) => setForm({ ...form, fabricante: e.target.value })}
-                    placeholder="Ej: Microsoft, Adobe"
+                    value={licenciaForm.nombre_software}
+                    onChange={(e) => setLicenciaForm({...licenciaForm, nombre_software: e.target.value})}
+                    placeholder="Ej. Microsoft Office 2021 LTSC"
+                    required
                   />
                 </div>
-              </div>
 
-              <div className={styles.fieldRow}>
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Tipo de Licencia</label>
-                  <select
-                    className={styles.fieldInput}
-                    value={form.tipo}
-                    onChange={(e) => setForm({ ...form, tipo: e.target.value })}
-                  >
-                    {TIPO_LICENCIA_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Versión</label>
+                    <input 
+                      type="text" 
+                      className={styles.fieldInput}
+                      value={licenciaForm.version}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, version: e.target.value})}
+                      placeholder="Ej. Pro Plus, 1.0"
+                    />
+                  </div>
+
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Tipo de Licencia</label>
+                    <select 
+                      className={styles.fieldInput}
+                      value={licenciaForm.tipo_licencia}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, tipo_licencia: e.target.value})}
+                    >
+                      <option value="Perpetua">Perpetua</option>
+                      <option value="Suscripción mensual">Suscripción mensual</option>
+                      <option value="Suscripción anual">Suscripción anual</option>
+                      <option value="OEM">OEM</option>
+                      <option value="Volumen">Volumen</option>
+                      <option value="Freeware">Freeware</option>
+                      <option value="Open Source">Open Source</option>
+                    </select>
+                  </div>
                 </div>
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Cantidad de Asientos / Total *</label>
-                  <input
-                    type="number"
-                    className={styles.fieldInput}
-                    value={form.cantidad_total}
-                    onChange={(e) => setForm({ ...form, cantidad_total: e.target.value ? Number(e.target.value) : '' })}
-                    min="1"
-                  />
-                  {errors.cantidad_total && <span className={styles.fieldError}>{errors.cantidad_total}</span>}
+
+                <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Clave de Activación / Producto</label>
+                    <input 
+                      type="text" 
+                      className={styles.fieldInput}
+                      value={licenciaForm.clave_licencia}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, clave_licencia: e.target.value})}
+                      placeholder="Serial Key"
+                    />
+                  </div>
+
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Cantidad de Puestos</label>
+                    <input 
+                      type="number" 
+                      className={styles.fieldInput}
+                      value={licenciaForm.cantidad_puestos}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, cantidad_puestos: e.target.value})}
+                      placeholder="Vacío para ilimitados"
+                      min="1"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>Clave de Producto / Licencia</label>
-                <input
-                  type="text"
-                  className={styles.fieldInput}
-                  value={form.clave_producto}
-                  onChange={(e) => setForm({ ...form, clave_producto: e.target.value })}
-                  placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
-                />
-              </div>
+                <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Estado</label>
+                    <select 
+                      className={styles.fieldInput}
+                      value={licenciaForm.estado}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, estado: e.target.value})}
+                    >
+                      <option value="Vigente">Vigente</option>
+                      <option value="Por vencer">Por vencer</option>
+                      <option value="Vencida">Vencida</option>
+                      <option value="Cancelada">Cancelada</option>
+                    </select>
+                  </div>
 
-              <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Costo</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      className={styles.fieldInput}
+                      value={licenciaForm.costo}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, costo: e.target.value})}
+                      placeholder="Valor en USD o ARS"
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.fieldRow}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Fecha de Compra</label>
+                    <input 
+                      type="date" 
+                      className={styles.fieldInput}
+                      value={licenciaForm.fecha_compra}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, fecha_compra: e.target.value})}
+                    />
+                  </div>
+
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Fecha de Vencimiento</label>
+                    <input 
+                      type="date" 
+                      className={styles.fieldInput}
+                      value={licenciaForm.fecha_vencimiento}
+                      onChange={(e) => setLicenciaForm({...licenciaForm, fecha_vencimiento: e.target.value})}
+                    />
+                  </div>
+                </div>
+
                 <div className={styles.field}>
                   <label className={styles.fieldLabel}>Proveedor</label>
-                  <select
+                  <select 
                     className={styles.fieldInput}
-                    value={form.id_proveedor}
-                    onChange={(e) => setForm({ ...form, id_proveedor: e.target.value ? Number(e.target.value) : '' })}
+                    value={licenciaForm.id_proveedor}
+                    onChange={(e) => setLicenciaForm({...licenciaForm, id_proveedor: e.target.value})}
                   >
-                    <option value="">Ninguno</option>
-                    {proveedores.map((p) => (
-                      <option key={p.id} value={p.id}>{p.nombre}</option>
-                    ))}
+                    <option value="">Sin Proveedor</option>
+                    {proveedores.map(p => <option key={p.id} value={p.id}>{p.razon_social}</option>)}
                   </select>
                 </div>
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Estado</label>
-                  <select
-                    className={styles.fieldInput}
-                    value={form.estado}
-                    onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                  >
-                    {ESTADO_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
 
-              <div className={styles.fieldRow}>
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Fecha de Compra</label>
-                  <input
-                    type="date"
-                    className={styles.fieldInput}
-                    value={form.fecha_compra}
-                    onChange={(e) => setForm({ ...form, fecha_compra: e.target.value })}
-                  />
-                </div>
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Fecha de Vencimiento</label>
-                  <input
-                    type="date"
-                    className={styles.fieldInput}
-                    value={form.fecha_vencimiento}
-                    onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })}
+                  <label className={styles.fieldLabel}>Notas</label>
+                  <textarea 
+                    className={styles.fieldTextarea}
+                    value={licenciaForm.notas}
+                    onChange={(e) => setLicenciaForm({...licenciaForm, notas: e.target.value})}
+                    placeholder="Detalles del contrato de suscripción, cuentas asociadas, etc."
                   />
                 </div>
               </div>
 
-              <div className={styles.field}>
-                <label className={styles.fieldLabel}>Notas / Comentarios</label>
-                <textarea
-                  className={styles.fieldTextarea}
-                  value={(form as any).notes || ''}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value } as any)}
-                  placeholder="Detalles adicionales..."
-                />
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setIsModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.saveBtn}>
+                  Guardar
+                </button>
               </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <button className={styles.cancelBtn} onClick={closeModal}>Cancelar</button>
-              <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Assign Modal */}
-      {assignOpen && selectedItem && (
-        <div className={styles.modalOverlay} onClick={closeAssign}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      {/* ASSIGNMENT MODAL */}
+      {isAssignModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>Asignar Licencia</h2>
-              <button className={styles.modalCloseBtn} onClick={closeAssign}><X size={20} /></button>
+              <h3 className={styles.modalTitle}>Asignar Licencia</h3>
+              <button className={styles.modalCloseBtn} onClick={() => setIsAssignModalOpen(false)}>
+                <X size={20} />
+              </button>
             </div>
-            <div className={styles.modalBody}>
-              <div style={{ padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                Licencia: <strong>{selectedItem.software}</strong><br />
-                Asientos libres: <strong>{selectedItem.cantidad_total - selectedItem.cantidad_en_uso}</strong>
-              </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginTop: 'var(--space-2)' }}>
+            <form onSubmit={handleAssignSubmit}>
+              <div className={styles.modalBody}>
+                <div style={{ fontSize: '13px', background: 'var(--bg-tertiary)', padding: '10px 14px', borderRadius: 'var(--radius-md)', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 600, display: 'block' }}>Software: {selectedLicencia?.nombre_software}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Puestos Usados: {selectedLicencia?.puestos_usados || 0} / {selectedLicencia?.cantidad_puestos !== null ? selectedLicencia?.cantidad_puestos : '∞'}
+                  </span>
+                </div>
+
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Opción A: Asignar a PC</label>
-                  <select
+                  <label className={styles.fieldLabel}>Usuario *</label>
+                  <select 
                     className={styles.fieldInput}
-                    value={assignForm.id_pc}
-                    onChange={(e) => setAssignForm({ ...assignForm, id_pc: e.target.value ? Number(e.target.value) : '', id_persona: '', id_puesto: '', id_sector: '' })}
+                    value={assignForm.id_usuario}
+                    onChange={(e) => setAssignForm({...assignForm, id_usuario: e.target.value})}
+                    required
                   >
-                    <option value="">Seleccione PC...</option>
-                    {pcs.map((pc) => (
-                      <option key={pc.id_activo} value={pc.id_activo}>
-                        {pc.activo?.codigo_interno} — {pc.hostname} ({pc.activo?.marcas?.nombre} {pc.activo?.modelos?.nombre})
+                    <option value="">Seleccione Usuario del Sistema</option>
+                    {usuarios.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombre} {u.apellido || ''} ({u.email})
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Opción B: Asignar a Persona</label>
-                  <select
-                    className={styles.fieldInput}
-                    value={assignForm.id_persona}
-                    onChange={(e) => setAssignForm({ ...assignForm, id_persona: e.target.value ? Number(e.target.value) : '', id_pc: '', id_puesto: '', id_sector: '' })}
-                  >
-                    <option value="">Seleccione persona...</option>
-                    {personas.map((p) => (
-                      <option key={p.id} value={p.id}>{p.nombre} {p.apellido || ''}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Opción C: Asignar a Puesto</label>
-                  <select
-                    className={styles.fieldInput}
-                    value={assignForm.id_puesto}
-                    onChange={(e) => setAssignForm({ ...assignForm, id_puesto: e.target.value ? Number(e.target.value) : '', id_pc: '', id_persona: '', id_sector: '' })}
-                  >
-                    <option value="">Seleccione puesto...</option>
-                    {puestos.map((pst) => (
-                      <option key={pst.id} value={pst.id}>{pst.codigo_puesto} — {pst.descripcion}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Opción D: Asignar a Sector</label>
-                  <select
-                    className={styles.fieldInput}
-                    value={assignForm.id_sector}
-                    onChange={(e) => setAssignForm({ ...assignForm, id_sector: e.target.value ? Number(e.target.value) : '', id_pc: '', id_persona: '', id_puesto: '' })}
-                  >
-                    <option value="">Seleccione sector...</option>
-                    {sectores.map((sec) => (
-                      <option key={sec.id} value={sec.id}>{sec.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel}>Notas de asignación</label>
-                  <input
-                    type="text"
+                  <label className={styles.fieldLabel}>Notas de Asignación</label>
+                  <textarea 
                     className={styles.fieldInput}
                     value={assignForm.notas}
-                    onChange={(e) => setAssignForm({ ...assignForm, notas: e.target.value })}
-                    placeholder="Ej: Licencia anual para gerencia"
+                    onChange={(e) => setAssignForm({...assignForm, notas: e.target.value})}
+                    placeholder="Ej. Notebook de diseño de Juan, PC de Soporte"
+                    style={{ minHeight: '60px', resize: 'vertical' }}
                   />
                 </div>
               </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <button className={styles.cancelBtn} onClick={closeAssign}>Cancelar</button>
-              <button className={styles.saveBtn} onClick={handleAssign} disabled={saving}>
-                {saving ? 'Asignando...' : 'Asignar'}
+
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setIsAssignModalOpen(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.saveBtn}>
+                  Asignar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM DIALOG */}
+      {isConfirmOpen && (
+        <div className={styles.confirmOverlay}>
+          <div className={styles.confirmModal}>
+            <h3 className={styles.confirmTitle}>{confirmConfig.title}</h3>
+            <p className={styles.confirmMessage}>{confirmConfig.message}</p>
+            <div className={styles.confirmActions}>
+              <button className={styles.cancelBtn} onClick={() => setIsConfirmOpen(false)}>
+                Cancelar
+              </button>
+              <button 
+                className={confirmConfig.type === 'delete' ? styles.dangerBtn : styles.saveBtn}
+                onClick={handleConfirmAction}
+              >
+                {confirmConfig.type === 'delete' ? 'Eliminar' : 'Liberar'}
               </button>
             </div>
           </div>

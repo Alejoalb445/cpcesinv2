@@ -38,30 +38,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserData = useCallback(async (authUser: User) => {
     try {
       const { data: usuario, error } = await supabase
-        .from('usuarios_sistema')
+        .from('usuarios')
         .select(`
           id,
-          id_persona,
+          email,
+          nombre,
+          apellido,
+          id_sector,
           rol,
           activo,
-          persona:personas(*)
+          sector:sectores(id, nombre)
         `)
         .eq('id', authUser.id)
         .single();
 
       if (error || !usuario) {
-        setUser(null);
+        const meta = authUser.user_metadata || {};
+        setUser({
+          id: authUser.id,
+          email: authUser.email || '',
+          role: (meta.rol || meta.role || 'Admin IT') as RolSistema,
+          nombre: meta.nombre || 'Usuario',
+          apellido: meta.apellido || 'Supabase',
+          activo: true,
+          id_sector: null,
+          sector: undefined,
+        });
         return;
       }
 
-      const personaData = Array.isArray(usuario.persona) ? usuario.persona[0] : usuario.persona;
+      const sectorData = Array.isArray(usuario.sector) ? usuario.sector[0] : usuario.sector;
 
       setUser({
         id: usuario.id,
-        email: authUser.email || '',
+        email: usuario.email,
         role: usuario.rol as RolSistema,
-        persona: personaData || null,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
         activo: usuario.activo,
+        id_sector: usuario.id_sector,
+        sector: sectorData || undefined,
       });
     } catch {
       setUser(null);
@@ -114,9 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const role = user?.role;
-  const canCreate = role === 'SuperAdmin' || role === 'Admin' || role === 'Tecnico';
-  const canDelete = role === 'SuperAdmin' || role === 'Admin';
-  const canAdmin = role === 'SuperAdmin' || role === 'Admin';
+  const canCreate = role === 'Admin IT' || role === 'Técnico';
+  const canDelete = role === 'Admin IT';
+  const canAdmin = role === 'Admin IT';
   const isReadOnly = role === 'Consulta';
 
   return (

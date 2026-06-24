@@ -1,174 +1,119 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
-import type { Puesto, PuestoPersonaHistorial, AsignacionActivo } from '@/types/database';
+import { PuestoTrabajo, CreateDTO, UpdateDTO } from '@/types/database';
 
-// ============================================================================
-// PUESTOS SERVICE
-// ============================================================================
-
-type PuestoInsert = Omit<Puesto, 'id' | 'created_at' | 'updated_at' | 'sector' | 'ubicacion_fisica'>;
-type PuestoUpdate = Partial<PuestoInsert>;
-
-const PUESTO_SELECT = `
-  *,
-  sector:sectores(*),
-  ubicacion_fisica:ubicaciones_fisicas(
-    *,
-    sede:sedes(*)
-  )
-`;
-
-export async function getPuestos(search?: string, id_sector?: number, estado?: string) {
-  const supabase = getSupabaseClient();
-  let query = supabase
-    .from('puestos')
-    .select(PUESTO_SELECT)
-    .order('codigo_puesto');
-
-  if (search) {
-    query = query.or(`codigo_puesto.ilike.%${search}%,descripcion.ilike.%${search}%,ip.ilike.%${search}%`);
+export async function getPuestos(
+  search?: string,
+  id_sector?: number,
+  id_ubicacion?: number,
+  activo?: boolean
+) {
+  try {
+    const supabase = getSupabaseClient();
+    let query = supabase
+      .from('puestos_trabajo')
+      .select('*, ubicacion:ubicaciones(*), sector:sectores(*), usuario:usuarios(*)');
+    
+    if (activo !== undefined) {
+      query = query.eq('activo', activo);
+    }
+    
+    if (id_sector !== undefined && id_sector !== null) {
+      query = query.eq('id_sector', id_sector);
+    }
+    
+    if (id_ubicacion !== undefined && id_ubicacion !== null) {
+      query = query.eq('id_ubicacion', id_ubicacion);
+    }
+    
+    if (search) {
+      query = query.or(`codigo.ilike.%${search}%,descripcion.ilike.%${search}%,boca_red.ilike.%${search}%`);
+    }
+    
+    query = query.order('codigo', { ascending: true });
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    return { data: data as PuestoTrabajo[], error: null };
+  } catch (error: any) {
+    console.error('Error in getPuestos:', error);
+    return { data: null, error };
   }
-  if (id_sector) query = query.eq('id_sector', id_sector);
-  if (estado) query = query.eq('estado', estado);
-
-  const { data, error } = await query;
-  return { data: data as Puesto[] | null, error };
 }
 
 export async function getPuestoById(id: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('puestos')
-    .select(PUESTO_SELECT)
-    .eq('id', id)
-    .single();
-
-  return { data: data as Puesto | null, error };
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('puestos_trabajo')
+      .select(`
+        *,
+        ubicacion:ubicaciones(*),
+        sector:sectores(*),
+        usuario:usuarios(*),
+        computadoras(*),
+        perifericos(*)
+      `)
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    
+    return { data: data as any, error: null };
+  } catch (error: any) {
+    console.error(`Error in getPuestoById(${id}):`, error);
+    return { data: null, error };
+  }
 }
 
-export async function createPuesto(data: PuestoInsert) {
-  const supabase = getSupabaseClient();
-  const { data: result, error } = await supabase
-    .from('puestos')
-    .insert(data)
-    .select(PUESTO_SELECT)
-    .single();
-
-  return { data: result as Puesto | null, error };
+export async function createPuesto(data: CreateDTO<PuestoTrabajo>) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data: createdData, error } = await supabase
+      .from('puestos_trabajo')
+      .insert(data)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: createdData as PuestoTrabajo, error: null };
+  } catch (error: any) {
+    console.error('Error in createPuesto:', error);
+    return { data: null, error };
+  }
 }
 
-export async function updatePuesto(id: number, data: PuestoUpdate) {
-  const supabase = getSupabaseClient();
-  const { data: result, error } = await supabase
-    .from('puestos')
-    .update(data)
-    .eq('id', id)
-    .select(PUESTO_SELECT)
-    .single();
-
-  return { data: result as Puesto | null, error };
+export async function updatePuesto(id: number, data: UpdateDTO<PuestoTrabajo>) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data: updatedData, error } = await supabase
+      .from('puestos_trabajo')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: updatedData as PuestoTrabajo, error: null };
+  } catch (error: any) {
+    console.error(`Error in updatePuesto(${id}):`, error);
+    return { data: null, error };
+  }
 }
 
 export async function deletePuesto(id: number) {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase
-    .from('puestos')
-    .update({ estado: 'Inactivo' })
-    .eq('id', id);
-
-  return { error };
-}
-
-// ============================================================================
-// PUESTO - PERSONA HISTORIAL
-// ============================================================================
-
-export async function getPuestoPersonas(id_puesto: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('puesto_persona_historial')
-    .select(`
-      *,
-      persona:personas(*)
-    `)
-    .eq('id_puesto', id_puesto)
-    .eq('activo', true)
-    .order('fecha_inicio', { ascending: false });
-
-  return { data: data as PuestoPersonaHistorial[] | null, error };
-}
-
-export async function asignarPersonaPuesto(data: Omit<PuestoPersonaHistorial, 'id' | 'created_at' | 'persona' | 'puesto'>) {
-  const supabase = getSupabaseClient();
-  const { data: result, error } = await supabase
-    .from('puesto_persona_historial')
-    .insert(data)
-    .select(`
-      *,
-      persona:personas(*)
-    `)
-    .single();
-
-  return { data: result as PuestoPersonaHistorial | null, error };
-}
-
-export async function finalizarAsignacionPersona(id: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('puesto_persona_historial')
-    .update({
-      activo: false,
-      fecha_fin: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select()
-    .single();
-
-  return { data: data as PuestoPersonaHistorial | null, error };
-}
-
-// ============================================================================
-// PUESTO - ACTIVOS ASIGNADOS
-// ============================================================================
-
-export async function getPuestoActivos(id_puesto: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('asignaciones_activos')
-    .select(`
-      *,
-      activo:activos(
-        *,
-        tipo_activo:tipos_activo(*),
-        marca:marcas(*),
-        modelo:modelos(*)
-      ),
-      persona:personas(*),
-      sector:sectores(*)
-    `)
-    .eq('id_puesto', id_puesto)
-    .eq('estado', 'Asignado')
-    .order('fecha_inicio', { ascending: false });
-
-  return { data: data as AsignacionActivo[] | null, error };
-}
-
-export async function getHistorialAsignaciones(id_puesto: number) {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('asignaciones_activos')
-    .select(`
-      *,
-      activo:activos(
-        *,
-        tipo_activo:tipos_activo(*),
-        marca:marcas(*),
-        modelo:modelos(*)
-      ),
-      persona:personas(*),
-      sector:sectores(*)
-    `)
-    .eq('id_puesto', id_puesto)
-    .order('fecha_inicio', { ascending: false });
-
-  return { data: data as AsignacionActivo[] | null, error };
+  try {
+    const supabase = getSupabaseClient();
+    const { data: deletedData, error } = await supabase
+      .from('puestos_trabajo')
+      .update({ activo: false })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    
+    return { data: deletedData as PuestoTrabajo, error: null };
+  } catch (error: any) {
+    console.error(`Error in deletePuesto(${id}):`, error);
+    return { data: null, error };
+  }
 }

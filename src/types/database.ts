@@ -1,695 +1,574 @@
 // ============================================================================
-// INVENTARIO CPC - Database Types
-// TypeScript types matching the Supabase PostgreSQL schema
+// INVENTARIO CPC v2.0 — TypeScript Types
+// Mapeo completo del esquema EAM modular
 // ============================================================================
 
-// ============================================================================
-// ENUMS
-// ============================================================================
-export type RolSistema = 'SuperAdmin' | 'Admin' | 'Tecnico' | 'Consulta';
-export type EstadoGeneral = 'Activo' | 'Inactivo';
-export type EstadoActivo = 'En Depósito' | 'Asignado' | 'En Reparación' | 'De Baja' | 'Extraviado';
-export type EstadoAsignacion = 'Asignado' | 'Devuelto' | 'Transferido' | 'En Reparación' | 'De Baja';
-export type TipoPc = 'Desktop' | 'Notebook' | 'Servidor' | 'All-in-One' | 'Mini PC' | 'Tablet';
-export type TipoImpresora = 'Láser B/N' | 'Láser Color' | 'Tinta B/N' | 'Tinta Color' | 'Térmica' | 'Matricial' | 'Multifunción';
-export type TipoDvr = 'DVR' | 'NVR';
-export type TipoCamara = 'IP' | 'Analógica' | 'PTZ' | 'Wifi';
-export type EstadoPedido = 'Pendiente' | 'En revisión' | 'Sin stock' | 'Entregado' | 'Cancelado' | 'Rechazado';
-export type TipoMovimientoStock = 'Entrada' | 'Entrega' | 'Ajuste positivo' | 'Ajuste negativo' | 'Devolución' | 'Baja' | 'Recepción compra';
-export type PrioridadTicket = 'Baja' | 'Media' | 'Alta' | 'Crítica';
-export type EstadoTicket = 'Pendiente' | 'En proceso' | 'Esperando tercero' | 'Resuelto' | 'Cancelado';
-export type EstadoCompra = 'Pendiente' | 'Solicitado' | 'Aprobado' | 'Comprado' | 'Recibido' | 'Cancelado';
-export type TipoActa = 'Entrega' | 'Devolución' | 'Cambio' | 'Préstamo';
+// --------------------------------------------------------------------------
+// Enums / Literal Types
+// --------------------------------------------------------------------------
 
-// ============================================================================
-// TABLE TYPES
-// ============================================================================
+export type RolSistema = 'Admin IT' | 'Técnico' | 'Consulta';
 
-export interface Sede {
+export type EstadoActivo =
+  | 'Activo'
+  | 'En reparación'
+  | 'En stock'
+  | 'Dado de baja'
+  | 'Prestado'
+  | 'Extraviado';
+
+export type TipoComponente =
+  | 'RAM'
+  | 'Disco'
+  | 'Fuente'
+  | 'Placa de red'
+  | 'Placa de video'
+  | 'Motherboard'
+  | 'Procesador'
+  | 'Lectora'
+  | 'Otro';
+
+export type CategoriaPeriferico =
+  | 'Monitor'
+  | 'Teclado'
+  | 'Mouse'
+  | 'Webcam'
+  | 'Auricular'
+  | 'Parlante'
+  | 'Lector de código'
+  | 'Docking'
+  | 'Hub USB'
+  | 'Otro';
+
+export type CategoriaInfra =
+  | 'Switch'
+  | 'Router'
+  | 'Access Point'
+  | 'Firewall'
+  | 'Servidor'
+  | 'NAS'
+  | 'UPS'
+  | 'Estabilizador'
+  | 'DVR'
+  | 'NVR'
+  | 'Cámara IP'
+  | 'Otro';
+
+export type TipoImpresora =
+  | 'Laser'
+  | 'Inkjet'
+  | 'Matricial'
+  | 'Térmica'
+  | 'Multifunción'
+  | 'Plotter';
+
+export type TipoInsumo = 'Tóner' | 'Cartucho' | 'Cinta' | 'Rollo' | 'Otro';
+
+export type TipoMovil = 'Celular' | 'Tablet';
+
+export type TipoLicencia =
+  | 'Perpetua'
+  | 'Suscripción mensual'
+  | 'Suscripción anual'
+  | 'OEM'
+  | 'Volumen'
+  | 'Freeware'
+  | 'Open Source';
+
+export type EstadoLicencia = 'Vigente' | 'Por vencer' | 'Vencida' | 'Cancelada';
+
+export type PrioridadSoporte = 'Baja' | 'Media' | 'Alta' | 'Urgente';
+
+export type EstadoSoporte =
+  | 'Abierta'
+  | 'En progreso'
+  | 'En espera'
+  | 'Resuelta'
+  | 'Cancelada';
+
+export type TipoMovimientoInsumo = 'Ingreso' | 'Consumo' | 'Ajuste' | 'Devolución';
+
+export type ModoIP = 'DHCP' | 'Estática' | 'No aplica';
+
+// --------------------------------------------------------------------------
+// Catálogos Base
+// --------------------------------------------------------------------------
+
+export interface Ubicacion {
   id: number;
   nombre: string;
   direccion: string | null;
-  telefono: string | null;
+  piso: string | null;
   notas: string | null;
   activo: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface UbicacionFisica {
-  id: number;
-  id_sede: number;
-  detalle: string;
-  piso: string | null;
-  referencia: string | null;
-  activo: boolean;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  sede?: Sede;
 }
 
 export interface Sector {
   id: number;
   nombre: string;
-  descripcion: string | null;
-  activo: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SectorCorreo {
-  id: number;
-  id_sector: number;
-  email: string;
-  tipo_correo: string | null;
+  responsable: string | null;
   notas: string | null;
   activo: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Marca {
   id: number;
   nombre: string;
-  activo: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface Modelo {
   id: number;
-  nombre: string;
   id_marca: number;
-  tipo_dispositivo: string | null;
-  notas: string | null;
-  activo: boolean;
+  nombre: string;
+  categoria: string | null;
   created_at: string;
-  updated_at: string;
   // Joins
   marca?: Marca;
 }
 
 export interface Proveedor {
   id: number;
-  nombre: string;
-  contacto: string | null;
+  razon_social: string;
+  cuit: string | null;
   telefono: string | null;
   email: string | null;
   direccion: string | null;
+  contacto_nombre: string | null;
   notas: string | null;
   activo: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface ServicioInterno {
-  id: number;
+// --------------------------------------------------------------------------
+// Usuarios (vinculado a auth.users de Supabase)
+// --------------------------------------------------------------------------
+
+export interface Usuario {
+  id: string; // UUID from auth.users
+  email: string;
   nombre: string;
-  categoria: string | null;
-  descripcion: string | null;
-  criticidad: string;
-  responsable: string | null;
-  activo: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Persona {
-  id: number;
-  nombre: string;
-  apellido: string | null;
-  email: string | null;
-  telefono: string | null;
-  legajo: string | null;
-  id_sector_actual: number | null;
-  interno: boolean;
-  activo: boolean;
-  notas: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  sector_actual?: Sector;
-}
-
-export interface PersonaSectorHistorial {
-  id: number;
-  id_persona: number;
-  id_sector: number;
-  fecha_inicio: string;
-  fecha_fin: string | null;
-  activo: boolean;
-  notas: string | null;
-  created_at: string;
-  // Joins
-  sector?: Sector;
-  persona?: Persona;
-}
-
-export interface UsuarioSistema {
-  id: string;
-  id_persona: number | null;
+  apellido: string;
+  id_sector: number | null;
   rol: RolSistema;
   activo: boolean;
   created_at: string;
   updated_at: string;
   // Joins
-  persona?: Persona;
+  sector?: Sector;
 }
 
-export interface Puesto {
+// --------------------------------------------------------------------------
+// Puestos de Trabajo
+// --------------------------------------------------------------------------
+
+export interface PuestoTrabajo {
   id: number;
-  codigo_puesto: string;
-  id_sector: number | null;
-  id_ubicacion_fisica: number | null;
+  codigo: string;
+  id_ubicacion: number;
+  id_sector: number;
   descripcion: string | null;
+  usuario_asignado: string | null; // UUID → usuario
   ip: string | null;
-  modo_ip: string;
-  vlan: string | null;
+  modo_ip: ModoIP;
   boca_red: string | null;
-  patchera: string | null;
-  switch_referencia: string | null;
-  puerto_switch: string | null;
   telefono_interno: string | null;
-  estado: string;
   notas: string | null;
+  activo: boolean;
   created_at: string;
   updated_at: string;
   // Joins
+  ubicacion?: Ubicacion;
   sector?: Sector;
-  ubicacion_fisica?: UbicacionFisica;
+  usuario?: Usuario;
 }
 
-export interface PuestoPersonaHistorial {
-  id: number;
-  id_puesto: number;
-  id_persona: number;
-  turno: string | null;
-  fecha_inicio: string;
-  fecha_fin: string | null;
-  activo: boolean;
-  notas: string | null;
-  created_at: string;
-  // Joins
-  persona?: Persona;
-  puesto?: Puesto;
-}
+// --------------------------------------------------------------------------
+// Computadoras
+// --------------------------------------------------------------------------
 
-export interface TipoActivo {
+export interface Computadora {
   id: number;
-  nombre: string;
-  categoria: string;
-  descripcion: string | null;
-  activo: boolean;
-  created_at: string;
-}
-
-export interface Activo {
-  id: number;
-  id_tipo_activo: number;
+  tipo: 'Desktop' | 'Notebook' | 'All-in-One' | 'Mini PC';
+  hostname: string | null;
   id_marca: number | null;
   id_modelo: number | null;
   serial: string | null;
-  codigo_interno: string | null;
-  estado: EstadoActivo;
-  fecha_compra: string | null;
+  codigo_inventario: string | null;
+  procesador: string | null;
+  ram_total_gb: number | null;
+  disco_total_gb: number | null;
+  sistema_operativo: string | null;
+  id_puesto: number | null;
   id_proveedor: number | null;
-  valor_estimado: number | null;
+  fecha_compra: string | null;
   garantia_hasta: string | null;
-  observaciones: string | null;
-  dado_de_baja: boolean;
-  fecha_baja: string | null;
-  motivo_baja: string | null;
+  estado: EstadoActivo;
+  notas: string | null;
   created_at: string;
   updated_at: string;
   // Joins
-  tipo_activo?: TipoActivo;
   marca?: Marca;
   modelo?: Modelo;
+  puesto?: PuestoTrabajo;
   proveedor?: Proveedor;
+  componentes?: ComponentePc[];
+  interfaces_red?: InterfazRed[];
 }
 
-export interface ActivoPc {
-  id_activo: number;
-  tipo_pc: TipoPc;
-  hostname: string | null;
-  mac: string | null;
-  sistema_operativo: string | null;
-  arquitectura: string | null;
-  dominio_ad: boolean;
-  usuario_ad: string | null;
-  ip: string | null;
-  modo_ip: string;
-  notas_tecnicas: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivoImpresora {
-  id_activo: number;
-  tipo_impresora: TipoImpresora;
-  ip: string | null;
-  modo_conexion: string;
-  contador_paginas: number;
-  es_color: boolean;
-  doble_faz: boolean;
-  notas_tecnicas: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivoRed {
-  id_activo: number;
-  ip: string | null;
-  mac: string | null;
-  hostname: string | null;
-  cantidad_puertos: number | null;
-  ubicacion_logica: string | null;
-  notas_tecnicas: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivoTelefonia {
-  id_activo: number;
-  numero_interno: string | null;
-  ip: string | null;
-  mac: string | null;
-  patchera: string | null;
-  boca_red: string | null;
-  notas_tecnicas: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivoDvrNvr {
-  id_activo: number;
-  tipo: TipoDvr;
-  ip: string | null;
-  cantidad_canales: number;
-  capacidad_almacenamiento: string | null;
-  id_ubicacion_fisica: number | null;
-  ubicacion_especifica: string | null;
-  notas_tecnicas: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivoCamara {
-  id_activo: number;
-  tipo_camara: TipoCamara;
-  ip: string | null;
-  id_dvr_nvr: number | null;
-  canal: number | null;
-  id_ubicacion_fisica: number | null;
-  ubicacion_especifica: string | null;
-  notas_tecnicas: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AsignacionActivo {
-  id: number;
-  id_activo: number;
-  id_puesto: number | null;
-  id_persona: number | null;
-  id_sector: number | null;
-  fecha_inicio: string;
-  fecha_fin: string | null;
-  estado: EstadoAsignacion;
-  asignado_por: string | null;
-  observaciones: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  activo?: Activo;
-  puesto?: Puesto;
-  persona?: Persona;
-  sector?: Sector;
-}
-
-export interface CategoriaComponente {
-  id: number;
-  nombre: string;
-  descripcion: string | null;
-  activo: boolean;
-  created_at: string;
-}
+// --------------------------------------------------------------------------
+// Componentes de PC
+// --------------------------------------------------------------------------
 
 export interface ComponentePc {
   id: number;
-  id_categoria: number;
+  id_computadora: number | null;
+  tipo: TipoComponente;
   id_marca: number | null;
   id_modelo: number | null;
   serial: string | null;
-  codigo_interno: string | null;
-  capacidad_gb: number | null;
-  velocidad_mhz: number | null;
-  tecnologia: string | null;
-  watts: number | null;
+  capacidad: string | null;
+  velocidad: string | null;
+  detalle: string | null;
   estado: EstadoActivo;
-  fecha_compra: string | null;
-  observaciones: string | null;
+  en_stock: boolean;
+  notas: string | null;
   created_at: string;
   updated_at: string;
   // Joins
-  categoria?: CategoriaComponente;
   marca?: Marca;
   modelo?: Modelo;
+  computadora?: Computadora;
 }
 
-export interface ComponentePcInstalado {
-  id: number;
-  id_componente: number;
-  id_pc: number;
-  fecha_instalacion: string;
-  fecha_retiro: string | null;
-  instalado_por: string | null;
-  retirado_por: string | null;
-  observaciones: string | null;
-  created_at: string;
-  // Joins
-  componente?: ComponentePc;
-}
+// --------------------------------------------------------------------------
+// Impresoras
+// --------------------------------------------------------------------------
 
-export interface CategoriaStock {
+export interface Impresora {
   id: number;
-  nombre: string;
-  descripcion: string | null;
-  activo: boolean;
-  created_at: string;
-}
-
-export interface ItemStock {
-  id: number;
-  id_categoria: number;
-  descripcion: string;
+  tipo: TipoImpresora;
   id_marca: number | null;
   id_modelo: number | null;
-  codigo: string | null;
-  color: string | null;
-  unidad_medida: string;
-  stock_actual: number;
-  stock_minimo: number;
-  stock_reposicion: number;
-  permite_serial: boolean;
-  observaciones: string | null;
-  activo: boolean;
+  serial: string | null;
+  codigo_inventario: string | null;
+  id_ubicacion: number | null;
+  id_sector: number | null;
+  ip: string | null;
+  es_red: boolean;
+  id_proveedor: number | null;
+  fecha_compra: string | null;
+  garantia_hasta: string | null;
+  estado: EstadoActivo;
+  notas: string | null;
   created_at: string;
   updated_at: string;
   // Joins
-  categoria?: CategoriaStock;
   marca?: Marca;
   modelo?: Modelo;
+  ubicacion?: Ubicacion;
+  sector?: Sector;
+  proveedor?: Proveedor;
+  interfaces_red?: InterfazRed[];
 }
 
-export interface MovimientoStock {
-  id: number;
-  id_item_stock: number;
-  tipo_movimiento: TipoMovimientoStock;
-  cantidad: number;
-  stock_antes: number | null;
-  stock_despues: number | null;
-  id_persona_destino: number | null;
-  id_puesto_destino: number | null;
-  id_sector_destino: number | null;
-  id_pedido_toner: number | null;
-  id_pedido_stock_general: number | null;
-  id_solicitud_compra: number | null;
-  realizado_por: string | null;
-  observaciones: string | null;
-  fecha: string;
-  // Joins
-  item_stock?: ItemStock;
-}
+// --------------------------------------------------------------------------
+// Insumos de Impresora (stock de tóner/cartuchos)
+// --------------------------------------------------------------------------
 
-export interface ImpresoraSuministroCompatible {
+export interface InsumoImpresora {
   id: number;
-  id_modelo_impresora: number;
-  id_item_stock: number;
-  observaciones: string | null;
+  nombre: string;
+  tipo: TipoInsumo;
+  codigo_oem: string | null;
+  id_marca: number | null;
+  compatible_con: string | null;
+  stock_actual: number;
+  stock_minimo: number;
+  notas: string | null;
   created_at: string;
+  updated_at: string;
   // Joins
-  item_stock?: ItemStock;
-  modelo_impresora?: Modelo;
+  marca?: Marca;
 }
 
-export interface PedidoToner {
+// --------------------------------------------------------------------------
+// Consumos / Movimientos de Insumos
+// --------------------------------------------------------------------------
+
+export interface ConsumoInsumo {
   id: number;
+  id_insumo: number;
   id_impresora: number | null;
-  id_item_stock: number;
-  id_persona_solicitante: number | null;
-  id_sector: number | null;
-  id_puesto: number | null;
+  tipo_movimiento: TipoMovimientoInsumo;
   cantidad: number;
-  estado: EstadoPedido;
-  origen: string;
-  email_origen: string | null;
-  asunto_email: string | null;
-  fecha_pedido: string;
-  fecha_entrega: string | null;
+  id_sector_destino: number | null;
+  solicitado_por: string | null;
   entregado_por: string | null;
   observaciones: string | null;
   created_at: string;
-  updated_at: string;
   // Joins
-  item_stock?: ItemStock;
-  persona_solicitante?: Persona;
-  sector?: Sector;
-  puesto?: Puesto;
+  insumo?: InsumoImpresora;
+  impresora?: Impresora;
+  sector_destino?: Sector;
 }
 
-export interface PedidoStockGeneral {
-  id: number;
-  id_item_stock: number;
-  id_persona_solicitante: number | null;
-  id_sector: number | null;
-  id_puesto: number | null;
-  cantidad: number;
-  motivo: string | null;
-  estado: EstadoPedido;
-  origen: string;
-  fecha_pedido: string;
-  fecha_entrega: string | null;
-  entregado_por: string | null;
-  observaciones: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  item_stock?: ItemStock;
-  persona_solicitante?: Persona;
-  sector?: Sector;
-  puesto?: Puesto;
-}
+// --------------------------------------------------------------------------
+// Dispositivos de Infraestructura
+// --------------------------------------------------------------------------
 
-export interface ActaEntrega {
+export interface DispositivoInfraestructura {
   id: number;
-  numero: string | null;
-  tipo: TipoActa;
-  id_persona_recibe: number | null;
-  id_puesto: number | null;
-  id_sector: number | null;
-  fecha: string;
-  generado_por: string | null;
-  observaciones: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  persona_recibe?: Persona;
-  puesto?: Puesto;
-  sector?: Sector;
-}
-
-export interface ActaEntregaDetalle {
-  id: number;
-  id_acta: number;
-  id_activo: number | null;
-  id_item_stock: number | null;
-  cantidad: number;
-  descripcion_manual: string | null;
-  observaciones: string | null;
-  created_at: string;
-  // Joins
-  activo?: Activo;
-  item_stock?: ItemStock;
-}
-
-export interface SolicitudCompra {
-  id: number;
-  id_item_stock: number | null;
-  descripcion_manual: string | null;
-  cantidad_sugerida: number;
-  motivo: string | null;
-  estado: EstadoCompra;
-  proveedor_sugerido: number | null;
-  solicitada_por: string | null;
-  fecha_solicitud: string;
-  fecha_cierre: string | null;
-  observaciones: string | null;
-  created_at: string;
-  updated_at: string;
-  // Joins
-  item_stock?: ItemStock;
-  proveedor?: Proveedor;
-}
-
-export interface OrdenCompra {
-  id: number;
-  numero: string | null;
+  categoria: CategoriaInfra;
+  id_marca: number | null;
+  id_modelo: number | null;
+  serial: string | null;
+  codigo_inventario: string | null;
+  id_ubicacion: number | null;
+  ip: string | null;
   id_proveedor: number | null;
-  estado: EstadoCompra;
-  fecha_orden: string;
-  fecha_estimada_recepcion: string | null;
-  creada_por: string | null;
-  observaciones: string | null;
+  fecha_compra: string | null;
+  garantia_hasta: string | null;
+  estado: EstadoActivo;
+  notas: string | null;
   created_at: string;
   updated_at: string;
   // Joins
+  marca?: Marca;
+  modelo?: Modelo;
+  ubicacion?: Ubicacion;
+  proveedor?: Proveedor;
+  detalle_red?: DetalleRed;
+  detalle_energia?: DetalleEnergia;
+  detalle_cctv?: DetalleCctv;
+  interfaces_red?: InterfazRed[];
+}
+
+export interface DetalleRed {
+  id: number;
+  id_dispositivo: number;
+  cantidad_puertos: number | null;
+  puertos_poe: number | null;
+  velocidad_gbps: number | null;
+  gestionable: boolean;
+  firmware: string | null;
+}
+
+export interface DetalleEnergia {
+  id: number;
+  id_dispositivo: number;
+  potencia_va: number | null;
+  potencia_watts: number | null;
+  tiempo_respaldo_min: number | null;
+  cantidad_tomas: number | null;
+  ultima_revision: string | null;
+}
+
+export interface DetalleCctv {
+  id: number;
+  id_dispositivo: number;
+  canales: number | null;
+  resolucion: string | null;
+  almacenamiento_tb: number | null;
+  poe_integrado: boolean;
+  protocolo: string | null;
+}
+
+// --------------------------------------------------------------------------
+// Periféricos
+// --------------------------------------------------------------------------
+
+export interface Periferico {
+  id: number;
+  categoria: CategoriaPeriferico;
+  id_marca: number | null;
+  id_modelo: number | null;
+  serial: string | null;
+  codigo_inventario: string | null;
+  id_puesto: number | null;
+  estado: EstadoActivo;
+  notas: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins
+  marca?: Marca;
+  modelo?: Modelo;
+  puesto?: PuestoTrabajo;
+}
+
+// --------------------------------------------------------------------------
+// Dispositivos Móviles
+// --------------------------------------------------------------------------
+
+export interface DispositivoMovil {
+  id: number;
+  tipo: TipoMovil;
+  id_marca: number | null;
+  id_modelo: number | null;
+  serial: string | null;
+  imei: string | null;
+  numero_linea: string | null;
+  codigo_inventario: string | null;
+  usuario_asignado: string | null;
+  id_sector: number | null;
+  id_proveedor: number | null;
+  fecha_compra: string | null;
+  garantia_hasta: string | null;
+  estado: EstadoActivo;
+  notas: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joins
+  marca?: Marca;
+  modelo?: Modelo;
+  usuario?: Usuario;
+  sector?: Sector;
   proveedor?: Proveedor;
 }
 
-export interface OrdenCompraDetalle {
+// --------------------------------------------------------------------------
+// Interfaces de Red (polimórfica)
+// --------------------------------------------------------------------------
+
+export interface InterfazRed {
   id: number;
-  id_orden_compra: number;
-  id_solicitud_compra: number | null;
-  id_item_stock: number | null;
-  descripcion_manual: string | null;
-  cantidad: number;
-  precio_unitario: number | null;
-  observaciones: string | null;
+  id_computadora: number | null;
+  id_impresora: number | null;
+  id_infra: number | null;
+  tipo: 'Ethernet' | 'WiFi' | 'Fibra';
+  mac: string | null;
+  ip: string | null;
+  mascara: string | null;
+  gateway: string | null;
+  dns: string | null;
+  vlan: string | null;
+  notas: string | null;
   created_at: string;
-  // Joins
-  item_stock?: ItemStock;
-  solicitud_compra?: SolicitudCompra;
 }
 
-export interface RecepcionCompra {
-  id: number;
-  id_orden_compra: number | null;
-  id_item_stock: number;
-  cantidad_recibida: number;
-  recibido_por: string | null;
-  fecha_recepcion: string;
-  observaciones: string | null;
-  created_at: string;
-  // Joins
-  item_stock?: ItemStock;
-  orden_compra?: OrdenCompra;
-}
+// --------------------------------------------------------------------------
+// Licencias
+// --------------------------------------------------------------------------
 
 export interface Licencia {
   id: number;
-  software: string;
-  fabricante: string | null;
-  tipo: string;
-  clave_producto: string | null;
-  cantidad_total: number;
-  cantidad_en_uso: number;
+  nombre_software: string;
+  version: string | null;
+  tipo_licencia: TipoLicencia;
+  clave_licencia: string | null;
+  cantidad_puestos: number | null;
+  puestos_usados: number;
   id_proveedor: number | null;
   fecha_compra: string | null;
   fecha_vencimiento: string | null;
-  estado: string;
+  costo: number | null;
+  estado: EstadoLicencia;
   notas: string | null;
   created_at: string;
   updated_at: string;
   // Joins
   proveedor?: Proveedor;
+  asignaciones?: LicenciaUsuario[];
 }
 
-export interface LicenciaAsignada {
+export interface LicenciaUsuario {
   id: number;
   id_licencia: number;
-  id_pc: number | null;
-  id_persona: number | null;
-  id_puesto: number | null;
-  id_sector: number | null;
-  fecha_asignado: string;
-  fecha_liberado: string | null;
-  estado: string;
+  id_usuario: string;
+  fecha_asignacion: string;
   notas: string | null;
-  created_at: string;
-  updated_at: string;
   // Joins
   licencia?: Licencia;
-  persona?: Persona;
-  puesto?: Puesto;
-  sector?: Sector;
+  usuario?: Usuario;
 }
 
-export interface TicketSoporte {
+// --------------------------------------------------------------------------
+// Historial de Asignaciones
+// --------------------------------------------------------------------------
+
+export interface HistorialAsignacion {
+  id: number;
+  tipo_activo: 'computadora' | 'periferico' | 'movil';
+  id_activo: number;
+  id_puesto: number | null;
+  id_usuario: string | null;
+  accion: 'Asignación' | 'Desasignación' | 'Transferencia' | 'Baja';
+  detalle: string | null;
+  realizado_por: string | null;
+  created_at: string;
+  // Joins (for display)
+  usuario?: Usuario;
+  puesto?: PuestoTrabajo;
+}
+
+// --------------------------------------------------------------------------
+// Soporte / Tareas
+// --------------------------------------------------------------------------
+
+export interface TareaSoporte {
   id: number;
   titulo: string;
   descripcion: string | null;
-  id_persona_afectada: number | null;
+  prioridad: PrioridadSoporte;
+  estado: EstadoSoporte;
+  id_solicitante: string | null;
+  id_tecnico: string | null;
   id_puesto: number | null;
-  id_sector: number | null;
+  tipo_activo: string | null;
   id_activo: number | null;
-  id_licencia: number | null;
-  id_servicio: number | null;
-  prioridad: PrioridadTicket;
-  estado: EstadoTicket;
-  origen: string;
-  asignado_a: string | null;
-  creado_por: string | null;
-  fecha_creacion: string;
-  fecha_cierre: string | null;
+  fecha_resolucion: string | null;
   notas_resolucion: string | null;
   created_at: string;
   updated_at: string;
   // Joins
-  persona_afectada?: Persona;
-  puesto?: Puesto;
-  sector?: Sector;
-  activo?: Activo;
-  licencia?: Licencia;
-  servicio?: ServicioInterno;
+  solicitante?: Usuario;
+  tecnico?: Usuario;
+  puesto?: PuestoTrabajo;
 }
 
-export interface TicketComentario {
-  id: number;
-  id_ticket: number;
-  comentario: string;
-  creado_por: string | null;
-  created_at: string;
-}
+// --------------------------------------------------------------------------
+// Log de Auditoría
+// --------------------------------------------------------------------------
 
 export interface LogAuditoria {
   id: number;
-  fecha: string;
-  user_id: string | null;
   tabla: string;
-  registro_id: string | null;
+  id_registro: number;
   accion: 'INSERT' | 'UPDATE' | 'DELETE';
   datos_anteriores: Record<string, unknown> | null;
   datos_nuevos: Record<string, unknown> | null;
+  usuario_id: string | null;
+  created_at: string;
 }
 
-// ============================================================================
-// AUTH CONTEXT TYPES
-// ============================================================================
+// --------------------------------------------------------------------------
+// Auth Context User
+// --------------------------------------------------------------------------
+
 export interface AuthUser {
   id: string;
   email: string;
   role: RolSistema;
-  persona: Persona | null;
+  nombre: string;
+  apellido: string;
   activo: boolean;
+  id_sector: number | null;
+  sector?: Sector;
 }
 
-// ============================================================================
-// UTILITY TYPES
-// ============================================================================
-export interface PaginationParams {
-  page: number;
-  pageSize: number;
-}
+// --------------------------------------------------------------------------
+// Form / Helper Types
+// --------------------------------------------------------------------------
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  count: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
+export type CreateDTO<T> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
+export type UpdateDTO<T> = Partial<Omit<T, 'id' | 'created_at' | 'updated_at'>>;
 
+// Select option for dropdowns
 export interface SelectOption {
   value: string | number;
   label: string;
