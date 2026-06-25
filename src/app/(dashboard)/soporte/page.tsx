@@ -36,6 +36,10 @@ export default function SoportePage() {
   const [filterPrioridad, setFilterPrioridad] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
@@ -125,6 +129,11 @@ export default function SoportePage() {
     fetchData();
   }, []);
 
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterPrioridad, filterEstado]);
+
   // Dynamically load assets list based on selected asset type in form
   useEffect(() => {
     async function loadActivos() {
@@ -189,6 +198,11 @@ export default function SoportePage() {
 
     return matchSearch && matchPrioridad && matchEstado;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTareas.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTareas = filteredTareas.slice(startIndex, startIndex + itemsPerPage);
 
   // Open Add modal
   const handleOpenAdd = () => {
@@ -373,92 +387,143 @@ export default function SoportePage() {
             <p className={styles.emptyText}>Creá un ticket de soporte para hacer el seguimiento técnico.</p>
           </div>
         ) : (
-          <div className={styles.table}>
-            <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1.5fr 1.2fr 120px' }}>
-              <div>Título / Descripción</div>
-              <div>Prioridad</div>
-              <div>Estado</div>
-              <div>Solicitante</div>
-              <div>Técnico Asignado</div>
-              <div>Fecha Creado</div>
-              <div style={{ textAlign: 'right' }}>Acciones</div>
+          <div className={styles.tableWrapper}>
+            <div className={styles.table}>
+              <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1.5fr 1.2fr 120px' }}>
+                <div>Título / Descripción</div>
+                <div>Prioridad</div>
+                <div>Estado</div>
+                <div>Solicitante</div>
+                <div>Técnico Asignado</div>
+                <div>Fecha Creado</div>
+                <div style={{ textAlign: 'right' }}>Acciones</div>
+              </div>
+
+              {paginatedTareas.map((item) => {
+                const solName = item.solicitante ? `${item.solicitante.nombre} ${item.solicitante.apellido || ''}` : 'Sin solicitante';
+                const tecName = item.tecnico ? `${item.tecnico.nombre} ${item.tecnico.apellido || ''}` : 'Sin asignar';
+                const puestoCode = item.puesto?.codigo ? `Puesto: ${item.puesto.codigo}` : null;
+
+                return (
+                  <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1.5fr 1.2fr 120px', cursor: 'default' }}>
+                    <div className={styles.rowText}>
+                      <span style={{ fontWeight: 600, display: 'block' }}>{item.titulo}</span>
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }} className={styles.rowText}>
+                        {item.descripcion || 'Sin descripción'}
+                      </span>
+                      {puestoCode && (
+                        <span style={{ display: 'inline-block', marginTop: '2px', fontSize: '10px', background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                          {puestoCode}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className={`${styles.badge} ${
+                        item.prioridad === 'Urgente' ? styles.badgeInactive : 
+                        item.prioridad === 'Alta' ? styles.badgeWarning : 
+                        item.prioridad === 'Media' ? styles.badgeInfo : styles.badgeActive
+                      }`}>
+                        {item.prioridad}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className={`${styles.badge} ${
+                        item.estado === 'Resuelta' ? styles.badgeActive : 
+                        item.estado === 'Cancelada' ? styles.badgeInactive : 
+                        item.estado === 'En progreso' ? styles.badgeWarning : styles.badgeInfo
+                      }`}>
+                        {item.estado}
+                      </span>
+                    </div>
+
+                    <div className={styles.rowText}>
+                      {solName}
+                      {item.solicitante?.email && (
+                        <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                          {item.solicitante.email}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className={styles.rowText}>
+                      {tecName}
+                      {item.tecnico?.email && (
+                        <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                          {item.tecnico.email}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      {new Date(item.created_at).toLocaleDateString('es-AR')}
+                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                        {new Date(item.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                      <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
+                        <Edit size={14} />
+                      </button>
+                      <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            {filteredTareas.map((item) => {
-              const solName = item.solicitante ? `${item.solicitante.nombre} ${item.solicitante.apellido || ''}` : 'Sin solicitante';
-              const tecName = item.tecnico ? `${item.tecnico.nombre} ${item.tecnico.apellido || ''}` : 'Sin asignar';
-              const puestoCode = item.puesto?.codigo ? `Puesto: ${item.puesto.codigo}` : null;
-
-              return (
-                <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1.5fr 1.2fr 120px', cursor: 'default' }}>
-                  <div className={styles.rowText}>
-                    <span style={{ fontWeight: 600, display: 'block' }}>{item.titulo}</span>
-                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }} className={styles.rowText}>
-                      {item.descripcion || 'Sin descripción'}
-                    </span>
-                    {puestoCode && (
-                      <span style={{ display: 'inline-block', marginTop: '2px', fontSize: '10px', background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>
-                        {puestoCode}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className={`${styles.badge} ${
-                      item.prioridad === 'Urgente' ? styles.badgeInactive : 
-                      item.prioridad === 'Alta' ? styles.badgeWarning : 
-                      item.prioridad === 'Media' ? styles.badgeInfo : styles.badgeActive
-                    }`}>
-                      {item.prioridad}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className={`${styles.badge} ${
-                      item.estado === 'Resuelta' ? styles.badgeActive : 
-                      item.estado === 'Cancelada' ? styles.badgeInactive : 
-                      item.estado === 'En progreso' ? styles.badgeWarning : styles.badgeInfo
-                    }`}>
-                      {item.estado}
-                    </span>
-                  </div>
-
-                  <div className={styles.rowText}>
-                    {solName}
-                    {item.solicitante?.email && (
-                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                        {item.solicitante.email}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className={styles.rowText}>
-                    {tecName}
-                    {item.tecnico?.email && (
-                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                        {item.tecnico.email}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    {new Date(item.created_at).toLocaleDateString('es-AR')}
-                    <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                      {new Date(item.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                    <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
-                      <Edit size={14} />
-                    </button>
-                    <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {/* Controles de paginación */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderTop: '1px solid var(--border-secondary)',
+              fontSize: '13px',
+              color: 'var(--text-secondary)'
+            }}>
+              <div>
+                Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredTareas.length)}</strong> de <strong>{filteredTareas.length}</strong> {filteredTareas.length === 1 ? 'registro' : 'registros'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
         )
       )}

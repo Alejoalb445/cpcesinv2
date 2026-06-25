@@ -30,6 +30,10 @@ export default function ComponentesPage() {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterStock, setFilterStock] = useState(''); // 'Todos' | 'stock' | 'asignado'
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -55,6 +59,11 @@ export default function ComponentesPage() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterTipo, filterStock]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -219,6 +228,11 @@ export default function ComponentesPage() {
     return matchesSearch && matchesTipo && matchesStock;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredComponentes.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedComponentes = filteredComponentes.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className={styles.page}>
       {/* Page Header */}
@@ -308,7 +322,7 @@ export default function ComponentesPage() {
               <div style={{ textAlign: 'right' }}>Acciones</div>
             </div>
 
-            {filteredComponentes.map((comp) => (
+            {paginatedComponentes.map((comp) => (
               <div
                 key={comp.id}
                 className={styles.tableRowItem}
@@ -358,6 +372,55 @@ export default function ComponentesPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Controles de paginación */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            borderTop: '1px solid var(--border-secondary)',
+            fontSize: '13px',
+            color: 'var(--text-secondary)'
+          }}>
+            <div>
+              Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredComponentes.length)}</strong> de <strong>{filteredComponentes.length}</strong> {filteredComponentes.length === 1 ? 'registro' : 'registros'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Anterior
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
       )}

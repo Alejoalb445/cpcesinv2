@@ -23,6 +23,10 @@ export default function ProveedoresPage() {
   const [data, setData] = useState<Proveedor[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [stateFilter, setStateFilter] = useState<'todos' | 'activos' | 'inactivos'>('todos');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,6 +72,11 @@ export default function ProveedoresPage() {
     fetchData();
   }, []);
 
+  // Reset pagination on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, stateFilter]);
+
   // Filter items
   const filteredData = data.filter(item => {
     const matchesSearch = item.razon_social.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -81,6 +90,11 @@ export default function ProveedoresPage() {
 
     return matchesSearch && matchesState;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   const openCreateModal = () => {
     setEditingItem(null);
@@ -251,50 +265,101 @@ export default function ProveedoresPage() {
           <p className={styles.emptyText}>Intentá cambiar los filtros de búsqueda o creá un nuevo proveedor.</p>
         </div>
       ) : (
-        <div className={styles.table}>
-          <div className={styles.tableHeader} style={{ gridTemplateColumns: '2.5fr 1.5fr 1.5fr 2fr 2fr 1fr 100px' }}>
-            <div>Razón Social</div>
-            <div>CUIT</div>
-            <div>Teléfono</div>
-            <div>Email</div>
-            <div>Contacto</div>
-            <div>Estado</div>
-            <div style={{ textAlign: 'right' }}>Acciones</div>
-          </div>
-          {filteredData.map((item) => (
-            <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2.5fr 1.5fr 1.5fr 2fr 2fr 1fr 100px' }}>
-              <div style={{ fontWeight: 600 }}>{item.razon_social}</div>
-              <div>{item.cuit || '—'}</div>
-              <div>{item.telefono || '—'}</div>
-              <div className={styles.rowText} title={item.email || ''}>{item.email || '—'}</div>
-              <div className={styles.rowText} title={item.contacto_nombre || ''}>{item.contacto_nombre || '—'}</div>
-              <div>
-                <span className={`${styles.badge} ${item.activo ? styles.badgeActive : styles.badgeInactive}`}>
-                  {item.activo ? 'Activo' : 'Inactivo'}
-                </span>
-              </div>
-              <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                {canCreate && (
-                  <button 
-                    className={styles.actionBtn} 
-                    onClick={() => openEditModal(item)}
-                    title="Editar"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                )}
-                {canDelete && (
-                  <button 
-                    className={styles.deleteBtn} 
-                    onClick={() => setItemToDelete(item)}
-                    title="Eliminar"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
+        <div className={styles.tableWrapper}>
+          <div className={styles.table}>
+            <div className={styles.tableHeader} style={{ gridTemplateColumns: '2.5fr 1.5fr 1.5fr 2fr 2fr 1fr 100px' }}>
+              <div>Razón Social</div>
+              <div>CUIT</div>
+              <div>Teléfono</div>
+              <div>Email</div>
+              <div>Contacto</div>
+              <div>Estado</div>
+              <div style={{ textAlign: 'right' }}>Acciones</div>
             </div>
-          ))}
+            {paginatedData.map((item) => (
+              <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2.5fr 1.5fr 1.5fr 2fr 2fr 1fr 100px' }}>
+                <div style={{ fontWeight: 600 }}>{item.razon_social}</div>
+                <div>{item.cuit || '—'}</div>
+                <div>{item.telefono || '—'}</div>
+                <div className={styles.rowText} title={item.email || ''}>{item.email || '—'}</div>
+                <div className={styles.rowText} title={item.contacto_nombre || ''}>{item.contacto_nombre || '—'}</div>
+                <div>
+                  <span className={`${styles.badge} ${item.activo ? styles.badgeActive : styles.badgeInactive}`}>
+                    {item.activo ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+                <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                  {canCreate && (
+                    <button 
+                      className={styles.actionBtn} 
+                      onClick={() => openEditModal(item)}
+                      title="Editar"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button 
+                      className={styles.deleteBtn} 
+                      onClick={() => setItemToDelete(item)}
+                      title="Eliminar"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Controles de paginación */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            borderTop: '1px solid var(--border-secondary)',
+            fontSize: '13px',
+            color: 'var(--text-secondary)'
+          }}>
+            <div>
+              Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredData.length)}</strong> de <strong>{filteredData.length}</strong> {filteredData.length === 1 ? 'registro' : 'registros'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Anterior
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -47,6 +47,10 @@ export default function UsuariosPage() {
   const [itemToDelete, setItemToDelete] = useState<Usuario | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -75,6 +79,11 @@ export default function UsuariosPage() {
     fetchData();
   }, []);
 
+  // Reset pagination on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sectorFilter, stateFilter]);
+
   // Filter items
   const filteredUsers = users.filter(item => {
     const fullName = `${item.nombre} ${item.apellido}`.toLowerCase();
@@ -90,6 +99,11 @@ export default function UsuariosPage() {
 
     return matchesSearch && matchesSector && matchesState;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
   const openCreateModal = () => {
     setEditingItem(null);
@@ -315,7 +329,7 @@ export default function UsuariosPage() {
             <div>Estado</div>
             <div style={{ textAlign: 'right' }}>Acciones</div>
           </div>
-          {filteredUsers.map((item) => (
+          {paginatedUsers.map((item) => (
             <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2.5fr 2.5fr 2fr 1.5fr 1fr 100px' }}>
               <div style={{ fontWeight: 600 }}>{item.apellido}, {item.nombre}</div>
               <div className={styles.rowText} title={item.email}>{item.email}</div>
@@ -352,6 +366,55 @@ export default function UsuariosPage() {
               </div>
             </div>
           ))}
+
+          {/* Controles de paginación */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            borderTop: '1px solid var(--border-secondary)',
+            fontSize: '13px',
+            color: 'var(--text-secondary)'
+          }}>
+            <div>
+              Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredUsers.length)}</strong> de <strong>{filteredUsers.length}</strong> {filteredUsers.length === 1 ? 'usuario' : 'usuarios'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Anterior
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

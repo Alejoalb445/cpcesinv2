@@ -4,7 +4,7 @@
    ============================================================================ */
 
 .page {
-  animation: fadeInUp 0.3s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
 /* Page Header */
@@ -298,6 +298,38 @@
   border-top: 1px solid var(--border-secondary);
 }
 
+/* Modal Tabs */
+.modalTabs {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 var(--space-5) var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-secondary);
+  padding-bottom: 2px;
+}
+
+.modalTabBtn {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.modalTabBtn:hover {
+  color: var(--text-secondary);
+}
+
+.modalTabBtnActive {
+  color: var(--accent-primary) !important;
+  border-bottom-color: var(--accent-primary);
+  font-weight: 600;
+}
+
 .fieldRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -318,6 +350,8 @@
 }
 
 .fieldInput {
+  width: 100%;
+  box-sizing: border-box;
   padding: 8px 12px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);

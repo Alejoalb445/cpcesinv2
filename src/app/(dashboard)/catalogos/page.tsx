@@ -30,6 +30,10 @@ export default function CatalogosPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [marcaFilter, setMarcaFilter] = useState<string>('todos');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Marca Modal States
   const [isMarcaModalOpen, setIsMarcaModalOpen] = useState(false);
   const [editingMarca, setEditingMarca] = useState<Marca | null>(null);
@@ -80,6 +84,11 @@ export default function CatalogosPage() {
     fetchData();
   }, []);
 
+  // Reset pagination on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, marcaFilter]);
+
   // Filtered Marcas
   const filteredMarcas = marcas.filter(m => 
     m.nombre.toLowerCase().includes(searchQuery.toLowerCase())
@@ -97,11 +106,22 @@ export default function CatalogosPage() {
     return matchesSearch && matchesMarca;
   });
 
+  // Pagination calculations for Marcas
+  const totalPagesMarcas = Math.ceil(filteredMarcas.length / itemsPerPage) || 1;
+  const startIndexMarcas = (currentPage - 1) * itemsPerPage;
+  const paginatedMarcas = filteredMarcas.slice(startIndexMarcas, startIndexMarcas + itemsPerPage);
+
+  // Pagination calculations for Modelos
+  const totalPagesModelos = Math.ceil(filteredModelos.length / itemsPerPage) || 1;
+  const startIndexModelos = (currentPage - 1) * itemsPerPage;
+  const paginatedModelos = filteredModelos.slice(startIndexModelos, startIndexModelos + itemsPerPage);
+
   // Reset search on tab change
   const handleTabChange = (tab: 'marcas' | 'modelos') => {
     setActiveTab(tab);
     setSearchQuery('');
     setMarcaFilter('todos');
+    setCurrentPage(1);
   };
 
   // Marca Actions
@@ -359,36 +379,87 @@ export default function CatalogosPage() {
             <p className={styles.emptyText}>Intentá cambiar los filtros o creá una nueva marca.</p>
           </div>
         ) : (
-          <div className={styles.table}>
-            <div className={styles.tableHeader} style={{ gridTemplateColumns: '8fr 2fr' }}>
-              <div>Nombre de la Marca</div>
-              <div style={{ textAlign: 'right' }}>Acciones</div>
-            </div>
-            {filteredMarcas.map((item) => (
-              <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '8fr 2fr' }}>
-                <div style={{ fontWeight: 600 }}>{item.nombre}</div>
-                <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                  {canCreate && (
-                    <button 
-                      className={styles.actionBtn} 
-                      onClick={() => openEditMarca(item)}
-                      title="Editar"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                  )}
-                  {canDelete && (
-                    <button 
-                      className={styles.deleteBtn} 
-                      onClick={() => setItemToDelete({ type: 'marca', data: item })}
-                      title="Eliminar"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
+          <div className={styles.tableWrapper}>
+            <div className={styles.table}>
+              <div className={styles.tableHeader} style={{ gridTemplateColumns: '8fr 2fr' }}>
+                <div>Nombre de la Marca</div>
+                <div style={{ textAlign: 'right' }}>Acciones</div>
               </div>
-            ))}
+              {paginatedMarcas.map((item) => (
+                <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '8fr 2fr' }}>
+                  <div style={{ fontWeight: 600 }}>{item.nombre}</div>
+                  <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                    {canCreate && (
+                      <button 
+                        className={styles.actionBtn} 
+                        onClick={() => openEditMarca(item)}
+                        title="Editar"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button 
+                        className={styles.deleteBtn} 
+                        onClick={() => setItemToDelete({ type: 'marca', data: item })}
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Controles de paginación */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderTop: '1px solid var(--border-secondary)',
+              fontSize: '13px',
+              color: 'var(--text-secondary)'
+            }}>
+              <div>
+                Mostrando <strong>{startIndexMarcas + 1}</strong> a <strong>{Math.min(startIndexMarcas + itemsPerPage, filteredMarcas.length)}</strong> de <strong>{filteredMarcas.length}</strong> {filteredMarcas.length === 1 ? 'registro' : 'registros'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPagesMarcas))}
+                  disabled={currentPage === totalPagesMarcas}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === totalPagesMarcas ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === totalPagesMarcas ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
         )
       ) : (
@@ -400,40 +471,91 @@ export default function CatalogosPage() {
             <p className={styles.emptyText}>Intentá cambiar los filtros o creá un nuevo modelo.</p>
           </div>
         ) : (
-          <div className={styles.table}>
-            <div className={styles.tableHeader} style={{ gridTemplateColumns: '4fr 3fr 3fr 100px' }}>
-              <div>Nombre del Modelo</div>
-              <div>Marca</div>
-              <div>Categoría</div>
-              <div style={{ textAlign: 'right' }}>Acciones</div>
-            </div>
-            {filteredModelos.map((item) => (
-              <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '4fr 3fr 3fr 100px' }}>
-                <div style={{ fontWeight: 600 }}>{item.nombre}</div>
-                <div>{item.marca?.nombre || '—'}</div>
-                <div>{item.categoria || '—'}</div>
-                <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                  {canCreate && (
-                    <button 
-                      className={styles.actionBtn} 
-                      onClick={() => openEditModelo(item)}
-                      title="Editar"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                  )}
-                  {canDelete && (
-                    <button 
-                      className={styles.deleteBtn} 
-                      onClick={() => setItemToDelete({ type: 'modelo', data: item })}
-                      title="Eliminar"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
+          <div className={styles.tableWrapper}>
+            <div className={styles.table}>
+              <div className={styles.tableHeader} style={{ gridTemplateColumns: '4fr 3fr 3fr 100px' }}>
+                <div>Nombre del Modelo</div>
+                <div>Marca</div>
+                <div>Categoría</div>
+                <div style={{ textAlign: 'right' }}>Acciones</div>
               </div>
-            ))}
+              {paginatedModelos.map((item) => (
+                <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '4fr 3fr 3fr 100px' }}>
+                  <div style={{ fontWeight: 600 }}>{item.nombre}</div>
+                  <div>{item.marca?.nombre || '—'}</div>
+                  <div>{item.categoria || '—'}</div>
+                  <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                    {canCreate && (
+                      <button 
+                        className={styles.actionBtn} 
+                        onClick={() => openEditModelo(item)}
+                        title="Editar"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button 
+                        className={styles.deleteBtn} 
+                        onClick={() => setItemToDelete({ type: 'modelo', data: item })}
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Controles de paginación */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderTop: '1px solid var(--border-secondary)',
+              fontSize: '13px',
+              color: 'var(--text-secondary)'
+            }}>
+              <div>
+                Mostrando <strong>{startIndexModelos + 1}</strong> a <strong>{Math.min(startIndexModelos + itemsPerPage, filteredModelos.length)}</strong> de <strong>{filteredModelos.length}</strong> {filteredModelos.length === 1 ? 'registro' : 'registros'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPagesModelos))}
+                  disabled={currentPage === totalPagesModelos}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === totalPagesModelos ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === totalPagesModelos ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
         )
       )}

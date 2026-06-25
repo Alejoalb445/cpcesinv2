@@ -178,6 +178,11 @@ export interface PuestoTrabajo {
   modo_ip: ModoIP;
   boca_red: string | null;
   telefono_interno: string | null;
+  tel_modulo_central: string | null;
+  tel_pachera: string | null;
+  tel_boca: string | null;
+  red_switch: string | null;
+  red_puerto: string | null;
   notas: string | null;
   activo: boolean;
   created_at: string;

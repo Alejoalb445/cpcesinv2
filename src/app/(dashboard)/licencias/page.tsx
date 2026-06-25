@@ -34,6 +34,10 @@ export default function LicenciasPage() {
   const [filterEstado, setFilterEstado] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
@@ -129,6 +133,11 @@ export default function LicenciasPage() {
     fetchData();
   }, []);
 
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterEstado, filterTipo]);
+
   // Filtering
   const filteredLicencias = licencias.filter(item => {
     const software = item.nombre_software || '';
@@ -145,6 +154,11 @@ export default function LicenciasPage() {
 
     return matchSearch && matchEstado && matchTipo;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredLicencias.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedLicencias = filteredLicencias.slice(startIndex, startIndex + itemsPerPage);
 
   // Expand / Collapse details
   const toggleExpand = (id: number) => {
@@ -416,183 +430,233 @@ export default function LicenciasPage() {
           <div className={styles.spinner} />
           <span>Cargando licencias...</span>
         </div>
+      ) : filteredLicencias.length === 0 ? (
+        <div className={styles.emptyState}>
+          <Key size={48} className={styles.emptyIcon} />
+          <h3 className={styles.emptyTitle}>No se encontraron licencias</h3>
+          <p className={styles.emptyText}>Agregá un software con su respectiva clave de activación.</p>
+        </div>
       ) : (
-        filteredLicencias.length === 0 ? (
-          <div className={styles.emptyState}>
-            <Key size={48} className={styles.emptyIcon} />
-            <h3 className={styles.emptyTitle}>No se encontraron licencias</h3>
-            <p className={styles.emptyText}>Agregá un software con su respectiva clave de activación.</p>
-          </div>
-        ) : (
+        <div className={styles.tableWrapper}>
           <div className={styles.table}>
             <div className={styles.tableHeader} style={{ gridTemplateColumns: '40px 2fr 1.2fr 1.2fr 1.2fr 1.5fr 1fr 150px' }}>
-              <div></div>
-              <div>Software</div>
-              <div>Versión</div>
-              <div>Tipo</div>
-              <div>Uso (Puestos)</div>
-              <div>Vencimiento</div>
-              <div>Estado</div>
-              <div style={{ textAlign: 'right' }}>Acciones</div>
-            </div>
+                <div></div>
+                <div>Software</div>
+                <div>Versión</div>
+                <div>Tipo</div>
+                <div>Uso (Puestos)</div>
+                <div>Vencimiento</div>
+                <div>Estado</div>
+                <div style={{ textAlign: 'right' }}>Acciones</div>
+              </div>
 
-            {filteredLicencias.map((item) => {
-              const total = item.cantidad_puestos;
-              const usados = item.puestos_usados || 0;
-              const diponibles = total !== null ? total - usados : 'Ilimitados';
-              const esExpandido = expandedLicencias.includes(item.id);
-              const asignaciones = item.licencias_usuarios || [];
+              {paginatedLicencias.map((item) => {
+                const total = item.cantidad_puestos;
+                const usados = item.puestos_usados || 0;
+                const diponibles = total !== null ? total - usados : 'Ilimitados';
+                const esExpandido = expandedLicencias.includes(item.id);
+                const asignaciones = item.licencias_usuarios || [];
 
-              return (
-                <React.Fragment key={item.id}>
-                  {/* Row */}
-                  <div className={styles.tableRowItem} style={{ gridTemplateColumns: '40px 2fr 1.2fr 1.2fr 1.2fr 1.5fr 1fr 150px' }}>
-                    <button 
-                      onClick={() => toggleExpand(item.id)}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                    >
-                      {esExpandido ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                    
-                    <div className={styles.rowText} style={{ fontWeight: 600 }}>
-                      {item.nombre_software}
-                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal', fontFamily: 'monospace' }}>
-                        Clave: {item.clave_licencia ? item.clave_licencia : 'Sin clave guardada'}
-                      </span>
-                    </div>
-
-                    <div className={styles.rowText}>{item.version || 'N/A'}</div>
-                    
-                    <div>
-                      <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                        {item.tipo_licencia}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span style={{ fontWeight: 600, color: total !== null && usados >= total ? 'var(--danger-text)' : 'inherit' }}>
-                        {usados}
-                      </span>
-                      <span> / {total !== null ? total : '∞'}</span>
-                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
-                        {total !== null ? `(${diponibles} libres)` : 'Libres'}
-                      </span>
-                    </div>
-
-                    <div>
-                      {item.fecha_vencimiento ? new Date(item.fecha_vencimiento).toLocaleDateString('es-AR') : 'Sin Vto'}
-                    </div>
-
-                    <div>
-                      <span className={`${styles.badge} ${
-                        item.estado === 'Vigente' ? styles.badgeActive : 
-                        item.estado === 'Por vencer' ? styles.badgeWarning : styles.badgeInactive
-                      }`}>
-                        {item.estado}
-                      </span>
-                    </div>
-
-                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                return (
+                  <React.Fragment key={item.id}>
+                    {/* Row */}
+                    <div className={styles.tableRowItem} style={{ gridTemplateColumns: '40px 2fr 1.2fr 1.2fr 1.2fr 1.5fr 1fr 150px' }}>
                       <button 
-                        className={styles.actionBtn} 
-                        onClick={() => handleOpenAssign(item)}
-                        title="Asignar a Usuario"
-                        disabled={total !== null && usados >= total}
-                        style={{ color: 'var(--success-text)' }}
+                        onClick={() => toggleExpand(item.id)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                       >
-                        <UserPlus size={14} />
+                        {esExpandido ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                       </button>
-                      <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
-                        <Edit size={14} />
-                      </button>
-                      <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, item.nombre_software)}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Expanded assignments section */}
-                  {esExpandido && (
-                    <div style={{ 
-                      gridColumn: '1 / span 8', 
-                      background: 'var(--bg-tertiary)', 
-                      padding: '16px 24px', 
-                      borderBottom: '1px solid var(--border-secondary)',
-                      animation: 'fadeIn 0.2s ease-out'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                          Usuarios Asignados ({asignaciones.length})
-                        </h4>
-                        {total !== null && (
-                          <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                            Puestos ocupados: {usados} de {total}
-                          </span>
-                        )}
+                      
+                      <div className={styles.rowText} style={{ fontWeight: 600 }}>
+                        {item.nombre_software}
+                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal', fontFamily: 'monospace' }}>
+                          Clave: {item.clave_licencia ? item.clave_licencia : 'Sin clave guardada'}
+                        </span>
                       </div>
 
-                      {asignaciones.length === 0 ? (
-                        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
-                          No hay usuarios asociados a esta licencia.
-                        </p>
-                      ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
-                          {asignaciones.map((lu: any) => {
-                            const u = lu.usuarios || {};
-                            const userName = u.nombre ? `${u.nombre} ${u.apellido || ''}` : 'Usuario Desconocido';
-                            return (
-                              <div key={lu.id} style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between',
-                                background: 'var(--bg-secondary)', 
-                                border: '1px solid var(--border-primary)', 
-                                padding: '8px 12px', 
-                                borderRadius: 'var(--radius-md)' 
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                                  <User size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
-                                  <div style={{ overflow: 'hidden' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: 500, display: 'block' }} className={styles.rowText}>
-                                      {userName}
-                                    </span>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'block' }} className={styles.rowText}>
-                                      {u.email || ''}
-                                    </span>
-                                    {lu.notas && (
-                                      <span style={{ fontSize: '10px', color: 'var(--accent-primary)', display: 'block' }} className={styles.rowText}>
-                                        Nota: {lu.notas}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                <button 
-                                  onClick={() => handleOpenRelease(lu.id, item.nombre_software, userName)}
-                                  style={{ 
-                                    background: 'none', 
-                                    border: 'none', 
-                                    color: 'var(--danger-text)', 
-                                    cursor: 'pointer',
-                                    padding: '4px',
-                                    borderRadius: 'var(--radius-sm)'
-                                  }}
-                                  title="Liberar puesto"
-                                >
-                                  <UserMinus size={14} />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                      <div className={styles.rowText}>{item.version || 'N/A'}</div>
+                      
+                      <div>
+                        <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                          {item.tipo_licencia}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span style={{ fontWeight: 600, color: total !== null && usados >= total ? 'var(--danger-text)' : 'inherit' }}>
+                          {usados}
+                        </span>
+                        <span> / {total !== null ? total : '∞'}</span>
+                        <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                          {total !== null ? `(${diponibles} libres)` : 'Libres'}
+                        </span>
+                      </div>
+
+                      <div>
+                        {item.fecha_vencimiento ? new Date(item.fecha_vencimiento).toLocaleDateString('es-AR') : 'Sin Vto'}
+                      </div>
+
+                      <div>
+                        <span className={`${styles.badge} ${
+                          item.estado === 'Vigente' ? styles.badgeActive : 
+                          item.estado === 'Por vencer' ? styles.badgeWarning : styles.badgeInactive
+                        }`}>
+                          {item.estado}
+                        </span>
+                      </div>
+
+                      <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                        <button 
+                          className={styles.actionBtn} 
+                          onClick={() => handleOpenAssign(item)}
+                          title="Asignar a Usuario"
+                          disabled={total !== null && usados >= total}
+                          style={{ color: 'var(--success-text)' }}
+                        >
+                          <UserPlus size={14} />
+                        </button>
+                        <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
+                          <Edit size={14} />
+                        </button>
+                        <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, item.nombre_software)}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
+
+                    {/* Expanded assignments section */}
+                    {esExpandido && (
+                      <div style={{ 
+                        gridColumn: '1 / span 8', 
+                        background: 'var(--bg-tertiary)', 
+                        padding: '16px 24px', 
+                        borderBottom: '1px solid var(--border-secondary)',
+                        animation: 'fadeIn 0.2s ease-out'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            Usuarios Asignados ({asignaciones.length})
+                          </h4>
+                          {total !== null && (
+                            <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                              Puestos ocupados: {usados} de {total}
+                            </span>
+                          )}
+                        </div>
+
+                        {asignaciones.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                            No hay usuarios asociados a esta licencia.
+                          </p>
+                        ) : (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px' }}>
+                            {asignaciones.map((lu: any) => {
+                              const u = lu.usuarios || {};
+                              const userName = u.nombre ? `${u.nombre} ${u.apellido || ''}` : 'Usuario Desconocido';
+                              return (
+                                <div key={lu.id} style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'space-between',
+                                  background: 'var(--bg-secondary)', 
+                                  border: '1px solid var(--border-primary)', 
+                                  padding: '8px 12px', 
+                                  borderRadius: 'var(--radius-md)' 
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                    <User size={16} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                                    <div style={{ overflow: 'hidden' }}>
+                                      <span style={{ fontSize: '13px', fontWeight: 500, display: 'block' }} className={styles.rowText}>
+                                        {userName}
+                                      </span>
+                                      <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', display: 'block' }} className={styles.rowText}>
+                                        {u.email || ''}
+                                      </span>
+                                      {lu.notas && (
+                                        <span style={{ fontSize: '10px', color: 'var(--accent-primary)', display: 'block' }} className={styles.rowText}>
+                                          Nota: {lu.notas}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <button 
+                                    onClick={() => handleOpenRelease(lu.id, item.nombre_software, userName)}
+                                    style={{ 
+                                      background: 'none', 
+                                      border: 'none', 
+                                      color: 'var(--danger-text)', 
+                                      cursor: 'pointer',
+                                      padding: '4px',
+                                      borderRadius: 'var(--radius-sm)'
+                                    }}
+                                    title="Liberar puesto"
+                                  >
+                                    <UserMinus size={14} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Controles de paginación */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderTop: '1px solid var(--border-secondary)',
+              fontSize: '13px',
+              color: 'var(--text-secondary)'
+            }}>
+              <div>
+                Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredLicencias.length)}</strong> de <strong>{filteredLicencias.length}</strong> {filteredLicencias.length === 1 ? 'registro' : 'registros'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
         )
-      )}
+      }
 
       {/* CRUD MODAL */}
       {isModalOpen && (

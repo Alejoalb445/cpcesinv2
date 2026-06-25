@@ -33,6 +33,10 @@ export default function ComputadorasPage() {
   const [filterTipo, setFilterTipo] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Selected row for details panel
   const [selectedComputadora, setSelectedComputadora] = useState<Computadora | null>(null);
   const [loadingComponents, setLoadingComponents] = useState(false);
@@ -68,6 +72,11 @@ export default function ComputadorasPage() {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterTipo, filterEstado]);
 
   useEffect(() => {
     if (selectedComputadora) {
@@ -281,6 +290,11 @@ export default function ComputadorasPage() {
     return matchesSearch && matchesTipo && matchesEstado;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredComputadoras.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedComputadoras = filteredComputadoras.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className={styles.page}>
       {/* Page Header */}
@@ -370,7 +384,7 @@ export default function ComputadorasPage() {
               <div style={{ textAlign: 'right' }}>Acciones</div>
             </div>
 
-            {filteredComputadoras.map((pc) => (
+            {paginatedComputadoras.map((pc) => (
               <div
                 key={pc.id}
                 className={styles.tableRowItem}
@@ -417,6 +431,55 @@ export default function ComputadorasPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Controles de paginación */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            borderTop: '1px solid var(--border-secondary)',
+            fontSize: '13px',
+            color: 'var(--text-secondary)'
+          }}>
+            <div>
+              Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredComputadoras.length)}</strong> de <strong>{filteredComputadoras.length}</strong> {filteredComputadoras.length === 1 ? 'registro' : 'registros'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Anterior
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
       )}

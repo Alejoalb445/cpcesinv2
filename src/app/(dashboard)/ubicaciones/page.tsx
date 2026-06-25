@@ -43,6 +43,10 @@ export default function UbicacionesPage() {
   const [itemToDelete, setItemToDelete] = useState<Ubicacion | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -65,6 +69,11 @@ export default function UbicacionesPage() {
     fetchData();
   }, []);
 
+  // Reset pagination on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, stateFilter]);
+
   // Filter items
   const filteredData = data.filter(item => {
     const matchesSearch = item.nombre.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -77,6 +86,11 @@ export default function UbicacionesPage() {
 
     return matchesSearch && matchesState;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   const openCreateModal = () => {
     setEditingItem(null);
@@ -247,7 +261,7 @@ export default function UbicacionesPage() {
             <div>Estado</div>
             <div style={{ textAlign: 'right' }}>Acciones</div>
           </div>
-          {filteredData.map((item) => (
+          {paginatedData.map((item) => (
             <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 2fr 1fr 3fr 1fr 100px' }}>
               <div style={{ fontWeight: 600 }}>{item.nombre}</div>
               <div className={styles.rowText} title={item.direccion || ''}>{item.direccion || '—'}</div>
@@ -280,6 +294,55 @@ export default function UbicacionesPage() {
               </div>
             </div>
           ))}
+
+          {/* Controles de paginación */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            borderTop: '1px solid var(--border-secondary)',
+            fontSize: '13px',
+            color: 'var(--text-secondary)'
+          }}>
+            <div>
+              Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredData.length)}</strong> de <strong>{filteredData.length}</strong> {filteredData.length === 1 ? 'ubicación' : 'ubicaciones'}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Anterior
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-primary)',
+                  color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -42,6 +42,10 @@ export default function ImpresorasPage() {
   const [filterEstado, setFilterEstado] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
@@ -188,6 +192,11 @@ export default function ImpresorasPage() {
     setFilterTipo('');
   }, [activeTab]);
 
+  // Reset pagination on filter, search or tab change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterEstado, filterTipo, activeTab]);
+
   // Filtering Logic
   const filteredImpresoras = impresoras.filter(item => {
     const brand = item.marcas?.nombre || '';
@@ -234,6 +243,21 @@ export default function ImpresorasPage() {
       (item.entregado_por && item.entregado_por.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   });
+
+  // Pagination for Impresoras
+  const totalPagesImpresoras = Math.ceil(filteredImpresoras.length / itemsPerPage) || 1;
+  const startIndexImpresoras = (currentPage - 1) * itemsPerPage;
+  const paginatedImpresoras = filteredImpresoras.slice(startIndexImpresoras, startIndexImpresoras + itemsPerPage);
+
+  // Pagination for Insumos
+  const totalPagesInsumos = Math.ceil(filteredInsumos.length / itemsPerPage) || 1;
+  const startIndexInsumos = (currentPage - 1) * itemsPerPage;
+  const paginatedInsumos = filteredInsumos.slice(startIndexInsumos, startIndexInsumos + itemsPerPage);
+
+  // Pagination for Consumos
+  const totalPagesConsumos = Math.ceil(filteredConsumos.length / itemsPerPage) || 1;
+  const startIndexConsumos = (currentPage - 1) * itemsPerPage;
+  const paginatedConsumos = filteredConsumos.slice(startIndexConsumos, startIndexConsumos + itemsPerPage);
 
   // Open Add Modals
   const handleOpenAdd = () => {
@@ -621,56 +645,107 @@ export default function ImpresorasPage() {
                 <p className={styles.emptyText}>Modificá los filtros o agregá una nueva impresora al sistema.</p>
               </div>
             ) : (
-              <div className={styles.table}>
-                <div className={styles.tableHeader} style={{ gridTemplateColumns: '1fr 2fr 1.5fr 1fr 2fr 1.2fr 120px' }}>
-                  <div>Tipo</div>
-                  <div>Marca / Modelo</div>
-                  <div>Dirección IP</div>
-                  <div>Red</div>
-                  <div>Ubicación / Sector</div>
-                  <div>Estado</div>
-                  <div style={{ textAlign: 'right' }}>Acciones</div>
-                </div>
-                {filteredImpresoras.map((item) => (
-                  <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '1fr 2fr 1.5fr 1fr 2fr 1.2fr 120px' }}>
-                    <div className={styles.rowText}>{item.tipo}</div>
-                    <div className={styles.rowText} style={{ fontWeight: 600 }}>
-                      {item.marcas?.nombre} {item.modelos?.nombre}
-                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal' }}>
-                        S/N: {item.serial || 'N/A'} {item.codigo_inventario && `| Inv: ${item.codigo_inventario}`}
-                      </span>
-                    </div>
-                    <div className={styles.rowText}>{item.ip || 'Sin IP'}</div>
-                    <div>
-                      <span className={`${styles.badge} ${item.es_red ? styles.badgeActive : styles.badgeInactive}`}>
-                        {item.es_red ? 'Sí' : 'No'}
-                      </span>
-                    </div>
-                    <div className={styles.rowText}>
-                      {item.ubicaciones?.nombre || 'Sin Ubicación'}
-                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                        {item.sectores?.nombre || 'Sin Sector'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className={`${styles.badge} ${
-                        item.estado === 'Activo' ? styles.badgeActive : 
-                        item.estado === 'En reparación' ? styles.badgeWarning : 
-                        item.estado === 'En stock' ? styles.badgeInfo : styles.badgeInactive
-                      }`}>
-                        {item.estado}
-                      </span>
-                    </div>
-                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                      <button className={styles.actionBtn} onClick={() => handleOpenEdit(item, 'impresora')}>
-                        <Edit size={14} />
-                      </button>
-                      <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, 'impresora')}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+              <div className={styles.tableWrapper}>
+                <div className={styles.table}>
+                  <div className={styles.tableHeader} style={{ gridTemplateColumns: '1fr 2fr 1.5fr 1fr 2fr 1.2fr 120px' }}>
+                    <div>Tipo</div>
+                    <div>Marca / Modelo</div>
+                    <div>Dirección IP</div>
+                    <div>Red</div>
+                    <div>Ubicación / Sector</div>
+                    <div>Estado</div>
+                    <div style={{ textAlign: 'right' }}>Acciones</div>
                   </div>
-                ))}
+                  {paginatedImpresoras.map((item) => (
+                    <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '1fr 2fr 1.5fr 1fr 2fr 1.2fr 120px' }}>
+                      <div className={styles.rowText}>{item.tipo}</div>
+                      <div className={styles.rowText} style={{ fontWeight: 600 }}>
+                        {item.marcas?.nombre} {item.modelos?.nombre}
+                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal' }}>
+                          S/N: {item.serial || 'N/A'} {item.codigo_inventario && `| Inv: ${item.codigo_inventario}`}
+                        </span>
+                      </div>
+                      <div className={styles.rowText}>{item.ip || 'Sin IP'}</div>
+                      <div>
+                        <span className={`${styles.badge} ${item.es_red ? styles.badgeActive : styles.badgeInactive}`}>
+                          {item.es_red ? 'Sí' : 'No'}
+                        </span>
+                      </div>
+                      <div className={styles.rowText}>
+                        {item.ubicaciones?.nombre || 'Sin Ubicación'}
+                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                          {item.sectores?.nombre || 'Sin Sector'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`${styles.badge} ${
+                          item.estado === 'Activo' ? styles.badgeActive : 
+                          item.estado === 'En reparación' ? styles.badgeWarning : 
+                          item.estado === 'En stock' ? styles.badgeInfo : styles.badgeInactive
+                        }`}>
+                          {item.estado}
+                        </span>
+                      </div>
+                      <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                        <button className={styles.actionBtn} onClick={() => handleOpenEdit(item, 'impresora')}>
+                          <Edit size={14} />
+                        </button>
+                        <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, 'impresora')}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Controles de paginación */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderTop: '1px solid var(--border-secondary)',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <div>
+                    Mostrando <strong>{startIndexImpresoras + 1}</strong> a <strong>{Math.min(startIndexImpresoras + itemsPerPage, filteredImpresoras.length)}</strong> de <strong>{filteredImpresoras.length}</strong> {filteredImpresoras.length === 1 ? 'registro' : 'registros'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Anterior
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPagesImpresoras))}
+                      disabled={currentPage === totalPagesImpresoras}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        color: currentPage === totalPagesImpresoras ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        cursor: currentPage === totalPagesImpresoras ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
               </div>
             )
           )}
@@ -684,51 +759,102 @@ export default function ImpresorasPage() {
                 <p className={styles.emptyText}>Agregá consumibles como tóners o cartuchos para controlar su stock.</p>
               </div>
             ) : (
-              <div className={styles.table}>
-                <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1fr 1fr 120px' }}>
-                  <div>Nombre Insumo</div>
-                  <div>Tipo</div>
-                  <div>Cód OEM</div>
-                  <div>Marca / Compatibilidad</div>
-                  <div>Stock Actual</div>
-                  <div>Stock Mínimo</div>
-                  <div style={{ textAlign: 'right' }}>Acciones</div>
-                </div>
-                {filteredInsumos.map((item) => {
-                  const esBajoStock = item.stock_actual <= item.stock_minimo;
-                  return (
-                    <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1fr 1fr 120px' }}>
-                      <div className={styles.rowText} style={{ fontWeight: 600 }}>{item.nombre}</div>
-                      <div>{item.tipo}</div>
-                      <div className={styles.rowText}>{item.codigo_oem || 'N/A'}</div>
-                      <div className={styles.rowText}>
-                        {item.marcas?.nombre || 'Genérico'}
-                        {item.compatible_con && (
-                          <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                            Comp: {item.compatible_con}
+              <div className={styles.tableWrapper}>
+                <div className={styles.table}>
+                  <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1fr 1fr 120px' }}>
+                    <div>Nombre Insumo</div>
+                    <div>Tipo</div>
+                    <div>Cód OEM</div>
+                    <div>Marca / Compatibilidad</div>
+                    <div>Stock Actual</div>
+                    <div>Stock Mínimo</div>
+                    <div style={{ textAlign: 'right' }}>Acciones</div>
+                  </div>
+                  {paginatedInsumos.map((item) => {
+                    const esBajoStock = item.stock_actual <= item.stock_minimo;
+                    return (
+                      <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 1fr 1fr 120px' }}>
+                        <div className={styles.rowText} style={{ fontWeight: 600 }}>{item.nombre}</div>
+                        <div>{item.tipo}</div>
+                        <div className={styles.rowText}>{item.codigo_oem || 'N/A'}</div>
+                        <div className={styles.rowText}>
+                          {item.marcas?.nombre || 'Genérico'}
+                          {item.compatible_con && (
+                            <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                              Comp: {item.compatible_con}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <span 
+                            className={`${styles.badge} ${esBajoStock ? styles.badgeInactive : styles.badgeActive}`}
+                            style={{ fontSize: '12px', padding: '4px 10px' }}
+                          >
+                            {item.stock_actual} uds
                           </span>
-                        )}
+                        </div>
+                        <div>{item.stock_minimo} uds</div>
+                        <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                          <button className={styles.actionBtn} onClick={() => handleOpenEdit(item, 'insumo')}>
+                            <Edit size={14} />
+                          </button>
+                          <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, 'insumo')}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <span 
-                          className={`${styles.badge} ${esBajoStock ? styles.badgeInactive : styles.badgeActive}`}
-                          style={{ fontSize: '12px', padding: '4px 10px' }}
-                        >
-                          {item.stock_actual} uds
-                        </span>
-                      </div>
-                      <div>{item.stock_minimo} uds</div>
-                      <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                        <button className={styles.actionBtn} onClick={() => handleOpenEdit(item, 'insumo')}>
-                          <Edit size={14} />
-                        </button>
-                        <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id, 'insumo')}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+
+                {/* Controles de paginación */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderTop: '1px solid var(--border-secondary)',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <div>
+                    Mostrando <strong>{startIndexInsumos + 1}</strong> a <strong>{Math.min(startIndexInsumos + itemsPerPage, filteredInsumos.length)}</strong> de <strong>{filteredInsumos.length}</strong> {filteredInsumos.length === 1 ? 'registro' : 'registros'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Anterior
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPagesInsumos))}
+                      disabled={currentPage === totalPagesInsumos}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        color: currentPage === totalPagesInsumos ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        cursor: currentPage === totalPagesInsumos ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
               </div>
             )
           )}
@@ -742,50 +868,101 @@ export default function ImpresorasPage() {
                 <p className={styles.emptyText}>Registrá las entregas de tóner y consumibles para hacer un seguimiento del stock.</p>
               </div>
             ) : (
-              <div className={styles.table}>
-                <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 2fr 1fr 1.2fr 1.5fr 1.5fr 1.5fr' }}>
-                  <div>Insumo</div>
-                  <div>Destino (Impresora / Sector)</div>
-                  <div>Cantidad</div>
-                  <div>Movimiento</div>
-                  <div>Fecha</div>
-                  <div>Solicitado por</div>
-                  <div>Entregado por</div>
-                </div>
-                {filteredConsumos.map((item) => (
-                  <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 2fr 1fr 1.2fr 1.5fr 1.5fr 1.5fr', cursor: 'default' }}>
-                    <div className={styles.rowText} style={{ fontWeight: 600 }}>
-                      {item.insumo?.nombre}
-                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal' }}>
-                        OEM: {item.insumo?.codigo_oem || 'N/A'}
-                      </span>
-                    </div>
-                    <div className={styles.rowText}>
-                      {item.impresora ? (
-                        <>
-                          Impresora: {item.impresora.modelos?.nombre || 'S/D'}
-                          <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                            S/N: {item.impresora.serial || 'N/A'}
-                          </span>
-                        </>
-                      ) : (
-                        `Sector: ${item.sector_destino?.nombre || 'General'}`
-                      )}
-                    </div>
-                    <div>{item.cantidad} uds</div>
-                    <div>
-                      <span className={`${styles.badge} ${
-                        item.tipo_movimiento === 'Ingreso' ? styles.badgeActive : 
-                        item.tipo_movimiento === 'Consumo' ? styles.badgeInactive : styles.badgeInfo
-                      }`}>
-                        {item.tipo_movimiento}
-                      </span>
-                    </div>
-                    <div>{new Date(item.created_at).toLocaleString('es-AR')}</div>
-                    <div className={styles.rowText}>{item.solicitado_por || 'N/A'}</div>
-                    <div className={styles.rowText}>{item.entregado_por || 'N/A'}</div>
+              <div className={styles.tableWrapper}>
+                <div className={styles.table}>
+                  <div className={styles.tableHeader} style={{ gridTemplateColumns: '2fr 2fr 1fr 1.2fr 1.5fr 1.5fr 1.5fr' }}>
+                    <div>Insumo</div>
+                    <div>Destino (Impresora / Sector)</div>
+                    <div>Cantidad</div>
+                    <div>Movimiento</div>
+                    <div>Fecha</div>
+                    <div>Solicitado por</div>
+                    <div>Entregado por</div>
                   </div>
-                ))}
+                  {paginatedConsumos.map((item) => (
+                    <div key={item.id} className={styles.tableRowItem} style={{ gridTemplateColumns: '2fr 2fr 1fr 1.2fr 1.5fr 1.5fr 1.5fr', cursor: 'default' }}>
+                      <div className={styles.rowText} style={{ fontWeight: 600 }}>
+                        {item.insumo?.nombre}
+                        <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal' }}>
+                          OEM: {item.insumo?.codigo_oem || 'N/A'}
+                        </span>
+                      </div>
+                      <div className={styles.rowText}>
+                        {item.impresora ? (
+                          <>
+                            Impresora: {item.impresora.modelos?.nombre || 'S/D'}
+                            <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                              S/N: {item.impresora.serial || 'N/A'}
+                            </span>
+                          </>
+                        ) : (
+                          `Sector: ${item.sector_destino?.nombre || 'General'}`
+                        )}
+                      </div>
+                      <div>{item.cantidad} uds</div>
+                      <div>
+                        <span className={`${styles.badge} ${
+                          item.tipo_movimiento === 'Ingreso' ? styles.badgeActive : 
+                          item.tipo_movimiento === 'Consumo' ? styles.badgeInactive : styles.badgeInfo
+                        }`}>
+                          {item.tipo_movimiento}
+                        </span>
+                      </div>
+                      <div>{new Date(item.created_at).toLocaleString('es-AR')}</div>
+                      <div className={styles.rowText}>{item.solicitado_por || 'N/A'}</div>
+                      <div className={styles.rowText}>{item.entregado_por || 'N/A'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Controles de paginación */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderTop: '1px solid var(--border-secondary)',
+                  fontSize: '13px',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <div>
+                    Mostrando <strong>{startIndexConsumos + 1}</strong> a <strong>{Math.min(startIndexConsumos + itemsPerPage, filteredConsumos.length)}</strong> de <strong>{filteredConsumos.length}</strong> {filteredConsumos.length === 1 ? 'registro' : 'registros'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Anterior
+                    </button>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPagesConsumos))}
+                      disabled={currentPage === totalPagesConsumos}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border-primary)',
+                        color: currentPage === totalPagesConsumos ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                        cursor: currentPage === totalPagesConsumos ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
               </div>
             )
           )}

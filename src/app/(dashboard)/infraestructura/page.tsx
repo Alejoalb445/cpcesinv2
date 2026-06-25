@@ -39,6 +39,10 @@ export default function InfraestructuraPage() {
   const [filterEstado, setFilterEstado] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
@@ -133,6 +137,11 @@ export default function InfraestructuraPage() {
     fetchData();
   }, [activeTab]);
 
+  // Reset pagination on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterEstado, filterCategoria, activeTab]);
+
   // Fetch infrastructure devices with details joined
   const fetchData = async () => {
     setLoading(true);
@@ -208,6 +217,11 @@ export default function InfraestructuraPage() {
 
     return matchSearch && matchEstado && matchCat;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredDispositivos.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedDispositivos = filteredDispositivos.slice(startIndex, startIndex + itemsPerPage);
 
   // Open Add Modal
   const handleOpenAdd = () => {
@@ -622,124 +636,177 @@ export default function InfraestructuraPage() {
             <p className={styles.emptyText}>Registrá un nuevo equipo de infraestructura para este sector.</p>
           </div>
         ) : (
-          <div className={styles.table}>
-            {/* Table Headers depending on active tab */}
-            {activeTab === 'red' && (
-              <div className={styles.tableHeader} style={{ gridTemplateColumns: '1.2fr 2fr 1.5fr 1fr 1.2fr 1.5fr 1fr 120px' }}>
-                <div>Categoría</div>
-                <div>Marca / Modelo</div>
-                <div>IP</div>
-                <div>Puertos</div>
-                <div>POE</div>
-                <div>Velocidad</div>
-                <div>Estado</div>
-                <div style={{ textAlign: 'right' }}>Acciones</div>
-              </div>
-            )}
-            {activeTab === 'energia' && (
-              <div className={styles.tableHeader} style={{ gridTemplateColumns: '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px' }}>
-                <div>Categoría</div>
-                <div>Marca / Modelo</div>
-                <div>Potencia VA</div>
-                <div>Watts</div>
-                <div>Tomas</div>
-                <div>Ubicación</div>
-                <div>Estado</div>
-                <div style={{ textAlign: 'right' }}>Acciones</div>
-              </div>
-            )}
-            {activeTab === 'cctv' && (
-              <div className={styles.tableHeader} style={{ gridTemplateColumns: '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px' }}>
-                <div>Categoría</div>
-                <div>Marca / Modelo</div>
-                <div>Canales</div>
-                <div>Resolución</div>
-                <div>HDD</div>
-                <div>Ubicación</div>
-                <div>Estado</div>
-                <div style={{ textAlign: 'right' }}>Acciones</div>
-              </div>
-            )}
-
-            {/* Table rows */}
-            {filteredDispositivos.map((item) => {
-              const detailRed = Array.isArray(item.detalle_red) ? item.detalle_red[0] : item.detalle_red;
-              const detailEnergia = Array.isArray(item.detalle_energia) ? item.detalle_energia[0] : item.detalle_energia;
-              const detailCctv = Array.isArray(item.detalle_cctv) ? item.detalle_cctv[0] : item.detalle_cctv;
-
-              return (
-                <div key={item.id} className={styles.tableRowItem} style={{
-                  gridTemplateColumns: 
-                    activeTab === 'red' ? '1.2fr 2fr 1.5fr 1fr 1.2fr 1.5fr 1fr 120px' :
-                    activeTab === 'energia' ? '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px' :
-                    '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px'
-                }}>
-                  {/* Common Column 1 */}
-                  <div>
-                    <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                      {item.categoria}
-                    </span>
-                  </div>
-
-                  {/* Common Column 2 */}
-                  <div className={styles.rowText} style={{ fontWeight: 600 }}>
-                    {item.marcas?.nombre} {item.modelos?.nombre}
-                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal' }}>
-                      S/N: {item.serial || 'N/A'} {item.codigo_inventario && `| Inv: ${item.codigo_inventario}`}
-                    </span>
-                  </div>
-
-                  {/* Tab specific columns */}
-                  {activeTab === 'red' && (
-                    <>
-                      <div className={styles.rowText}>{item.ip || 'Sin IP'}</div>
-                      <div>{detailRed?.cantidad_puertos || 'N/A'}</div>
-                      <div>{detailRed?.puertos_poe || '0'}</div>
-                      <div>{detailRed?.velocidad_gbps ? `${detailRed.velocidad_gbps} Gbps` : 'N/A'}</div>
-                    </>
-                  )}
-
-                  {activeTab === 'energia' && (
-                    <>
-                      <div>{detailEnergia?.potencia_va ? `${detailEnergia.potencia_va} VA` : 'N/A'}</div>
-                      <div>{detailEnergia?.potencia_watts ? `${detailEnergia.potencia_watts} W` : 'N/A'}</div>
-                      <div>{detailEnergia?.cantidad_tomas || 'N/A'}</div>
-                      <div className={styles.rowText}>{item.ubicaciones?.nombre || 'Sin ubicación'}</div>
-                    </>
-                  )}
-
-                  {activeTab === 'cctv' && (
-                    <>
-                      <div>{detailCctv?.canales || 'N/A'} ch</div>
-                      <div>{detailCctv?.resolucion || 'N/A'}</div>
-                      <div>{detailCctv?.almacenamiento_tb ? `${detailCctv.almacenamiento_tb} TB` : 'N/A'}</div>
-                      <div className={styles.rowText}>{item.ubicaciones?.nombre || 'Sin ubicación'}</div>
-                    </>
-                  )}
-
-                  {/* Common column: Estado */}
-                  <div>
-                    <span className={`${styles.badge} ${
-                      item.estado === 'Activo' ? styles.badgeActive : 
-                      item.estado === 'En reparación' ? styles.badgeWarning : 
-                      item.estado === 'En stock' ? styles.badgeInfo : styles.badgeInactive
-                    }`}>
-                      {item.estado}
-                    </span>
-                  </div>
-
-                  {/* Common Column: Actions */}
-                  <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                    <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
-                      <Edit size={14} />
-                    </button>
-                    <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+          <div className={styles.tableWrapper}>
+            <div className={styles.table}>
+              {/* Table Headers depending on active tab */}
+              {activeTab === 'red' && (
+                <div className={styles.tableHeader} style={{ gridTemplateColumns: '1.2fr 2fr 1.5fr 1fr 1.2fr 1.5fr 1fr 120px' }}>
+                  <div>Categoría</div>
+                  <div>Marca / Modelo</div>
+                  <div>IP</div>
+                  <div>Puertos</div>
+                  <div>POE</div>
+                  <div>Velocidad</div>
+                  <div>Estado</div>
+                  <div style={{ textAlign: 'right' }}>Acciones</div>
                 </div>
-              );
-            })}
+              )}
+              {activeTab === 'energia' && (
+                <div className={styles.tableHeader} style={{ gridTemplateColumns: '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px' }}>
+                  <div>Categoría</div>
+                  <div>Marca / Modelo</div>
+                  <div>Potencia VA</div>
+                  <div>Watts</div>
+                  <div>Tomas</div>
+                  <div>Ubicación</div>
+                  <div>Estado</div>
+                  <div style={{ textAlign: 'right' }}>Acciones</div>
+                </div>
+              )}
+              {activeTab === 'cctv' && (
+                <div className={styles.tableHeader} style={{ gridTemplateColumns: '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px' }}>
+                  <div>Categoría</div>
+                  <div>Marca / Modelo</div>
+                  <div>Canales</div>
+                  <div>Resolución</div>
+                  <div>HDD</div>
+                  <div>Ubicación</div>
+                  <div>Estado</div>
+                  <div style={{ textAlign: 'right' }}>Acciones</div>
+                </div>
+              )}
+
+              {/* Table rows */}
+              {paginatedDispositivos.map((item) => {
+                const detailRed = Array.isArray(item.detalle_red) ? item.detalle_red[0] : item.detalle_red;
+                const detailEnergia = Array.isArray(item.detalle_energia) ? item.detalle_energia[0] : item.detalle_energia;
+                const detailCctv = Array.isArray(item.detalle_cctv) ? item.detalle_cctv[0] : item.detalle_cctv;
+
+                return (
+                  <div key={item.id} className={styles.tableRowItem} style={{
+                    gridTemplateColumns: 
+                      activeTab === 'red' ? '1.2fr 2fr 1.5fr 1fr 1.2fr 1.5fr 1fr 120px' :
+                      activeTab === 'energia' ? '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px' :
+                      '1.2fr 2fr 1.2fr 1.2fr 1.2fr 2fr 1fr 120px'
+                  }}>
+                    {/* Common Column 1 */}
+                    <div>
+                      <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                        {item.categoria}
+                      </span>
+                    </div>
+
+                    {/* Common Column 2 */}
+                    <div className={styles.rowText} style={{ fontWeight: 600 }}>
+                      {item.marcas?.nombre} {item.modelos?.nombre}
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 'normal' }}>
+                        S/N: {item.serial || 'N/A'} {item.codigo_inventario && `| Inv: ${item.codigo_inventario}`}
+                      </span>
+                    </div>
+
+                    {/* Tab specific columns */}
+                    {activeTab === 'red' && (
+                      <>
+                        <div className={styles.rowText}>{item.ip || 'Sin IP'}</div>
+                        <div>{detailRed?.cantidad_puertos || 'N/A'}</div>
+                        <div>{detailRed?.puertos_poe || '0'}</div>
+                        <div>{detailRed?.velocidad_gbps ? `${detailRed.velocidad_gbps} Gbps` : 'N/A'}</div>
+                      </>
+                    )}
+
+                    {/* Energia Specific columns */}
+                    {activeTab === 'energia' && (
+                      <>
+                        <div>{detailEnergia?.potencia_va ? `${detailEnergia.potencia_va} VA` : 'N/A'}</div>
+                        <div>{detailEnergia?.potencia_watts ? `${detailEnergia.potencia_watts} W` : 'N/A'}</div>
+                        <div>{detailEnergia?.cantidad_tomas || 'N/A'}</div>
+                        <div className={styles.rowText}>{item.ubicaciones?.nombre || 'Sin ubicación'}</div>
+                      </>
+                    )}
+
+                    {/* CCTV Specific columns */}
+                    {activeTab === 'cctv' && (
+                      <>
+                        <div>{detailCctv?.canales || 'N/A'} ch</div>
+                        <div>{detailCctv?.resolucion || 'N/A'}</div>
+                        <div>{detailCctv?.almacenamiento_tb ? `${detailCctv.almacenamiento_tb} TB` : 'N/A'}</div>
+                        <div className={styles.rowText}>{item.ubicaciones?.nombre || 'Sin ubicación'}</div>
+                      </>
+                    )}
+
+                    {/* Common column: Estado */}
+                    <div>
+                      <span className={`${styles.badge} ${
+                        item.estado === 'Activo' ? styles.badgeActive : 
+                        item.estado === 'En reparación' ? styles.badgeWarning : 
+                        item.estado === 'En stock' ? styles.badgeInfo : styles.badgeInactive
+                      }`}>
+                        {item.estado}
+                      </span>
+                    </div>
+
+                    {/* Common Column: Actions */}
+                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                      <button className={styles.actionBtn} onClick={() => handleOpenEdit(item)}>
+                        <Edit size={14} />
+                      </button>
+                      <button className={styles.deleteBtn} onClick={() => handleOpenDelete(item.id)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Controles de paginación */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 16px',
+              borderTop: '1px solid var(--border-secondary)',
+              fontSize: '13px',
+              color: 'var(--text-secondary)'
+            }}>
+              <div>
+                Mostrando <strong>{startIndex + 1}</strong> a <strong>{Math.min(startIndex + itemsPerPage, filteredDispositivos.length)}</strong> de <strong>{filteredDispositivos.length}</strong> {filteredDispositivos.length === 1 ? 'registro' : 'registros'}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === 1 ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Anterior
+                </button>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-primary)',
+                    color: currentPage === totalPages ? 'var(--text-tertiary)' : 'var(--text-primary)',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
         )
       )}
